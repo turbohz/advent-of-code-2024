@@ -1,0 +1,12 @@
+[package]
+name = "advent-of-code-2024"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aoc_driver = "0.3.6"
+itertools = { version = "0.13.0", default-features = false }
+peg = "0.8.4"
+
+[dev-dependencies]
+pretty_assertions = "1.4"
