@@ -1,5 +1,7 @@
 // https://adventofcode.com/2024/day/1
 
+use super::*;
+
 peg::parser!{
 	grammar parse() for str {
 
@@ -43,11 +45,9 @@ pub fn solve(input: &str) -> String {
 	sum.to_string()
 }
 
-#[cfg(test)]
 mod test {
 
 	use super::*;
-	use crate::AppError;
 
 	#[test]
 	fn test_example() {
@@ -69,6 +69,6 @@ mod test {
 
 	#[test]
 	fn test_submit()-> Result<(), AppError> {
-		crate::try_submit(1, &solve)
+		try_submit(1, &solve)
 	}
 }

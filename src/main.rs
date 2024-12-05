@@ -1,45 +1,39 @@
-use std::{
-	error::Error,
-	process::ExitCode
-};
+use std::process::ExitCode;
+use aoc_driver::aoc_magic;
 
+pub use std::convert::identity;
+
+#[cfg(test)]
 mod days;
 
-const YEAR:i32 = 2024;
+pub const YEAR:i32 = 2024;
 
+#[allow(unused)]
 #[derive(Debug)]
-enum AppError {
+pub enum AppError {
 	BadConfiguration(String),
 	IncorrectSolution(String)
 }
 
 pub type Solver = &'static dyn Fn(&str)->String;
 
-fn try_submit(day:usize, solver:Solver)->Result<(),AppError> {
-	use aoc_driver::{calculate_and_post, Part::*};
-	use std::env;
-
-	let cookie: String = env::var("COOKIE")
+pub fn cookie() -> Result<String,AppError> {
+	std::env::var("COOKIE")
 		.map_err(|e| {
 			let msg = format!("Cookie error! {e:?}");
 			AppError::BadConfiguration(msg)
-		})?;
-
-	calculate_and_post(
-		&cookie, YEAR, day as i32,Part1,
-		Some(format!("inputs/{day}.txt")),
-		Some(format!("cache/{day}.json")),
-		solver
-	).map_err(|e| {
-		let msg = format!("Solution for day {day} rejected: {e:?}");
-		AppError::IncorrectSolution(msg)
-	})
+		})
 }
 
 fn main() -> ExitCode {
 
-	eprintln!("You're not supposed to run this program!");
-	eprintln!("Execute the test suite with: cargo test");
+	let cookie = cookie().unwrap();
+
+	// Tests Creates `cache/` and `inputs/`
+	let _ = aoc_magic!(&cookie, 2024:1:1, |_| "");
+
+	eprintln!("Project configured.");
+	eprintln!("Run `cargo test` to build and submit solutions");
 
 	ExitCode::FAILURE
 }
