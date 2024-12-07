@@ -2,12 +2,14 @@
 
 use super::*;
 
+type Pair = (usize,usize);
+
 peg::parser!{
+
 	grammar parse() for str {
 
 		rule _ = [' ' | '\t']
 		rule __ = _+
-		rule ___ = _*
 
 		rule digit() -> char = [c if c.is_ascii_digit()]
 
@@ -16,29 +18,21 @@ peg::parser!{
 
 		/// Matches a line from which two numbers separated
 		/// by whitespace can be extracted
-		rule id_pair() -> Option<[usize;2]>
-			= ___ lid:id() __ rid:id() { Some([lid,rid]) }
-
-		/// Matches an "empty" line
-		rule empty() -> Option<[usize;2]> = ___ { None }
-
-		pub rule pairs() -> Vec<[usize;2]>
-			= r:( (id_pair() / empty()) ++ "\n" ) { r.into_iter().flatten().collect() }
+		pub rule pair() -> Pair
+			= lid:id() __ rid:id() { (lid,rid) }
 	}
 }
 
 pub fn solve(input: &str) -> String {
 
-	use itertools::Itertools as _;
+	let (mut left, mut right):(Vec<usize>,Vec<usize>) = Input(input).iter(parse::pair)
+		.unzip();
 
-	let pairs:Vec<[usize;2]> = parse::pairs(input).unwrap();
-
-	let (mut left, mut right):(Vec<usize>,Vec<usize>) = pairs.iter().map(|[l,r]|(l,r)).unzip();
 	left.sort();
 	right.sort();
 
 	let sum:usize = left.iter()
-		.zip_eq(right)
+		.zip(right)
 		.map(|(l,r)| l.abs_diff(r))
 		.sum();
 
