@@ -63,6 +63,6 @@ mod test {
 
 	#[test]
 	fn test_submit()-> Result<(), AppError> {
-		try_submit(1, &solve)
+		try_submit(1, solve)
 	}
 }

@@ -15,8 +15,6 @@ pub enum AppError {
 	IncorrectSolution(String)
 }
 
-pub type Solver = &'static dyn Fn(&str)->String;
-
 pub fn cookie() -> Result<String,AppError> {
 	std::env::var("COOKIE")
 		.map_err(|e| {

@@ -15,7 +15,7 @@ impl<'a> Input<'a> {
 	}
 }
 
-fn try_submit(day:usize, solver:Solver)->Result<(),AppError> {
+fn try_submit(day:usize, solver:fn(&str)->String)->Result<(),AppError> {
 	use aoc_driver::{calculate_and_post, Part::*};
 
 	let cookie: String = cookie()?;
