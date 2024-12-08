@@ -1,4 +1,5 @@
 mod day01;
+mod day02;
 
 use std::fmt::Display;
 
