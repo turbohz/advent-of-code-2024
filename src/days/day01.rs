@@ -39,15 +39,24 @@ pub fn solve_1(input: &str) -> String {
 	sum.to_string()
 }
 
+pub fn solve_2(input: &str) -> String {
+
+	let (left, right):(Vec<usize>,Vec<usize>) = Input(input).iter(parse::pair)
+		.unzip();
+
+	let result:usize = left.iter()
+    	.map(|l| l * right.iter().filter(|r| *r == l).count())
+    	.sum();
+
+	result.to_string()
+}
+
 mod test {
 
 	use super::*;
 	use aoc_driver::Part::*;
 
-	#[test]
-	fn test_1_example() {
-
-		let input =
+	const EXAMPLE_INPUT:&str  =
 		r###"
 		3   4
 		4   3
@@ -57,13 +66,26 @@ mod test {
 		3   3
 		"###;
 
+	#[test]
+	fn test_1_example() {
+
 		let expected : &str = "11";
-		let actual = solve_1(input);
+		let actual = solve_1(EXAMPLE_INPUT);
+		assert_eq!(actual, expected);
+	}
+
+	#[test]
+	fn test_2_example() {
+
+		let expected : &str = "31";
+		let actual = solve_2(EXAMPLE_INPUT);
 		assert_eq!(actual, expected);
 	}
 
 	#[test]
 	fn test_submit()-> Result<(), AppError> {
-		try_submit(1, solve_1, Part1)
+		try_submit(1, solve_1, Part1)?;
+		try_submit(1, solve_2, Part2)?;
+		Ok(())
 	}
 }
