@@ -12,7 +12,11 @@ impl<'a> Input<'a> {
 		// clean up input comming from inline examples
 		let raw_lines = self.0.lines().map(str::trim_start).filter(|l| !l.is_empty());
 		// return a lazy parsing iterator
-		raw_lines.map(move |l| parse(l).expect("Parser should not fail"))
+		raw_lines.map(move |l| {
+			parse(l)
+				.inspect_err(|e| eprintln!("Failed parsing {l}: {e}"))
+				.expect("Parser should not fail")
+		})
 	}
 }
 
