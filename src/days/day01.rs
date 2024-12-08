@@ -23,7 +23,7 @@ peg::parser!{
 	}
 }
 
-pub fn solve(input: &str) -> String {
+pub fn solve_1(input: &str) -> String {
 
 	let (mut left, mut right):(Vec<usize>,Vec<usize>) = Input(input).iter(parse::pair)
 		.unzip();
@@ -42,9 +42,10 @@ pub fn solve(input: &str) -> String {
 mod test {
 
 	use super::*;
+	use aoc_driver::Part::*;
 
 	#[test]
-	fn test_example() {
+	fn test_1_example() {
 
 		let input =
 		r###"
@@ -57,12 +58,12 @@ mod test {
 		"###;
 
 		let expected : &str = "11";
-		let actual = solve(input);
+		let actual = solve_1(input);
 		assert_eq!(actual, expected);
 	}
 
 	#[test]
 	fn test_submit()-> Result<(), AppError> {
-		try_submit(1, solve)
+		try_submit(1, solve_1, Part1)
 	}
 }

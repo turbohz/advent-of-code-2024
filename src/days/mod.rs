@@ -1,6 +1,7 @@
 mod day01;
 
 use super::*;
+use aoc_driver::Part;
 use peg::{error::ParseError, str::LineCol};
 
 struct Input<'a>(&'a str);
@@ -15,13 +16,12 @@ impl<'a> Input<'a> {
 	}
 }
 
-fn try_submit(day:usize, solver:fn(&str)->String)->Result<(),AppError> {
-	use aoc_driver::{calculate_and_post, Part::*};
+fn try_submit(day:usize, solver:fn(&str)->String, part:Part)->Result<(),AppError> {
 
 	let cookie: String = cookie()?;
 
-	calculate_and_post(
-		&cookie, YEAR, day as i32,Part1,
+	aoc_driver::calculate_and_post(
+		&cookie, YEAR, day as i32, part,
 		Some(format!("inputs/{day}.txt")),
 		Some(format!("cache/{day}.json")),
 		solver
