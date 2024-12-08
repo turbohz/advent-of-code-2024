@@ -1,8 +1,25 @@
 mod day01;
 
+use std::fmt::Display;
+
 use super::*;
 use aoc_driver::Part;
 use peg::{error::ParseError, str::LineCol};
+
+#[derive(Clone, Copy)]
+struct Day(usize);
+
+impl Into<i32> for Day {
+    fn into(self) -> i32 {
+        self.0 as i32
+    }
+}
+
+impl Display for Day {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    	write!(f, "{}", self.0)
+    }
+}
 
 struct Input<'a>(&'a str);
 impl<'a> Input<'a> {
@@ -20,12 +37,12 @@ impl<'a> Input<'a> {
 	}
 }
 
-fn try_submit(day:usize, solver:fn(&str)->String, part:Part)->Result<(),AppError> {
+fn try_submit(day:Day, solver:fn(&str)->String, part:Part)->Result<(),AppError> {
 
 	let cookie: String = cookie()?;
 
 	aoc_driver::calculate_and_post(
-		&cookie, YEAR, day as i32, part,
+		&cookie, YEAR, day, part,
 		Some(format!("inputs/{day}.txt")),
 		Some(format!("cache/{day}.json")),
 		solver

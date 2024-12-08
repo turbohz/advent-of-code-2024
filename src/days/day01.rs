@@ -84,8 +84,8 @@ mod test {
 
 	#[test]
 	fn test_submit()-> Result<(), AppError> {
-		try_submit(1, solve_1, Part1)?;
-		try_submit(1, solve_2, Part2)?;
+		try_submit(Day(1), solve_1, Part1)?;
+		try_submit(Day(1), solve_2, Part2)?;
 		Ok(())
 	}
 }
