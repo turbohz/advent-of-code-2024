@@ -6,7 +6,7 @@ type Pair = (usize,usize);
 
 peg::parser!{
 
-	grammar parse() for str {
+	grammar line() for str {
 
 		rule _ = [' ' | '\t']
 		rule __ = _+
@@ -25,7 +25,7 @@ peg::parser!{
 
 pub fn solve_1(input: &str) -> String {
 
-	let (mut left, mut right):(Vec<usize>,Vec<usize>) = Input(input).iter(parse::pair)
+	let (mut left, mut right):(Vec<usize>,Vec<usize>) = Input(input).iter(line::pair)
 		.unzip();
 
 	left.sort();
@@ -41,7 +41,7 @@ pub fn solve_1(input: &str) -> String {
 
 pub fn solve_2(input: &str) -> String {
 
-	let (left, right):(Vec<usize>,Vec<usize>) = Input(input).iter(parse::pair)
+	let (left, right):(Vec<usize>,Vec<usize>) = Input(input).iter(line::pair)
 		.unzip();
 
 	let result:usize = left.iter()
