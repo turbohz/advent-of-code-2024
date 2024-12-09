@@ -45,7 +45,7 @@ pub fn solve_1(input: &str) -> String {
 
 	use itertools::*;
 
-	let lines = Input(input).iter(line::levels);
+	let lines = Input(input).parse_iter(line::levels);
 
 	const SAFE_RANGE:std::ops::RangeInclusive<usize> = 1..=3;
 

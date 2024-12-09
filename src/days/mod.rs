@@ -24,13 +24,19 @@ impl Display for Day {
 
 struct Input<'a>(&'a str);
 impl<'a> Input<'a> {
+
+	// Return an iterator of lines in the input
+	fn lines(&self) -> impl Iterator<Item=&'a str> + use<'a> {
+		// clean up input comming from inline examples
+		self.0.lines().map(str::trim_start).filter(|l| !l.is_empty())
+	}
+
 	/// Given a parser function, returns an iterator of parsed items of type T.
 	/// Panics if parsing fails.
-	fn iter<T>(&self, parse:fn(&'a str) -> Result<T,ParseError<LineCol>>)-> impl Iterator<Item=T> + use<'a,T> {
-		// clean up input comming from inline examples
-		let raw_lines = self.0.lines().map(str::trim_start).filter(|l| !l.is_empty());
+	fn parse_iter<T>(&self, parse:fn(&'a str) -> Result<T,ParseError<LineCol>>)-> impl Iterator<Item=T> + use<'a,T> {
+
 		// return a lazy parsing iterator
-		raw_lines.map(move |l| {
+		self.lines().map(move |l| {
 			parse(l)
 				.inspect_err(|e| eprintln!("Failed parsing {l}: {e}"))
 				.expect("Parser should not fail")
