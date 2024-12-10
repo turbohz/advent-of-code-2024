@@ -12,15 +12,15 @@ use peg::{error::ParseError, str::LineCol};
 struct Day(usize);
 
 impl Into<i32> for Day {
-    fn into(self) -> i32 {
-        self.0 as i32
-    }
+	fn into(self) -> i32 {
+		self.0 as i32
+	}
 }
 
 impl Display for Day {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    	write!(f, "{}", self.0)
-    }
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.0)
+	}
 }
 
 struct Input<'a>(&'a str);

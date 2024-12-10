@@ -45,8 +45,8 @@ pub fn solve_2(input: &str) -> String {
 		.unzip();
 
 	let result:usize = left.iter()
-    	.map(|l| l * right.iter().filter(|r| *r == l).count())
-    	.sum();
+		.map(|l| l * right.iter().filter(|r| *r == l).count())
+		.sum();
 
 	result.to_string()
 }
