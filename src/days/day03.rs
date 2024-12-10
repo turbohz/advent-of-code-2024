@@ -10,6 +10,25 @@ impl Mul {
 	}
 }
 
+#[derive(Debug)]
+enum Op {
+	Mul(usize,usize),
+}
+
+enum Chunk {
+	Op(Op),
+	Noise
+}
+
+impl Into<Option<Op>> for Chunk {
+	fn into(self) -> Option<Op> {
+		match self {
+			Chunk::Op(op) => Some(op),
+			_ => None
+		}
+	}
+}
+
 peg::parser!{
 
 	grammar memory() for str {
@@ -19,19 +38,18 @@ peg::parser!{
 		rule number() -> usize
 			= n:$(digit()*<1,3>) {? n.parse().or(Err("Expected usize value")) }
 
-		rule mul() -> Mul
-			= "mul(" a:number() "," b:number() ")" { Mul(a,b) }
+		// A chunk that contains an Op
+		rule mul() -> Chunk
+			= "mul(" a:number() "," b:number() ")" { Chunk::Op(Op::Mul(a,b)) }
 
-		rule corruption_span()
-			// Does NOT start with a mul() and is a sequence
-			// of zero or more "non-followed-by mul" characters,
-			// and a single "followeded-by mul character
-			= !mul() ([_]!mul())* [_]&mul()
+		// A useless char, which should be discarded
+		rule noise() -> Chunk
+			= [_] { Chunk::Noise }
 
-		/// Matches an optional `corruption_span` sequence followed by a
-		/// valid `mul` operator, and what comes after (if anything)
-		pub rule next_mul() -> (Mul,Option<&'input str>)
-			= corruption_span()? m:mul() rest:$([_]*)? { (m,rest) }
+		// Consumes a chunk, returning a possible op
+		// and maybe more data
+		pub rule next_op() -> (Option<Op>,Option<&'input str>)
+			= chunk:(mul() / noise()) rest:$([_]*)? { (chunk.into(),rest) }
 	}
 }
 
@@ -41,31 +59,34 @@ pub fn solve_1(input: &str) -> String {
 	// you'll get a single line, but the real input
 	// spans multiple lines (contains new line characters)
 
-	let input = Input(input).lines();
+	let lines = Input(input).lines();
 
-	input.map(|mut l| {
+	lines.map(|mut input| {
 
-		let mut sum:usize = 0;
+		let mut ops:Vec<Op> = vec![];
 
-		// parse iteratively, obtaining and executing the next mul
-		// accumulating its values
+		while !input.is_empty() {
 
-		loop {
+			let r = memory::next_op(input).unwrap();
 
-			let Ok((mul,maybe_rest)) = memory::next_mul(l) else {
-				// We are done: `l` contains leftovers without a `mul` op
-				break sum;
-			};
+			if let (Some(op),_) = r {
+				ops.push(op);
+			}
 
-			sum += mul.compute();
-
-			if let Some(rest) = maybe_rest {
-				l = rest;
-			} else {
-				// We are done: no more str to parse, it ended with a valid `mul` op
-				break sum;
+			if let (_,Some(rest)) = r {
+				input = rest
 			}
 		}
+
+		ops.iter().map(|op| {
+			#[allow(unreachable_patterns)]
+			match op {
+				Op::Mul(a,b) => a*b,
+				_ => panic!("Unsupported Op: {op:?}")
+			}
+		}).sum::<usize>()
+
+
 	}).sum::<usize>().to_string()
 }
 
