@@ -1,7 +1,5 @@
 // https://adventofcode.com/2024/day/2
 
-use std::cmp::Ordering;
-
 use super::*;
 
 type Levels = Vec<usize>;
@@ -24,45 +22,65 @@ peg::parser!{
 	}
 }
 
-pub fn solve_1(input: &str) -> String {
+type Pair = (usize,usize);
 
-	type Pair = (usize,usize);
+#[derive(Clone, Copy, Debug)]
+struct Delta {
+	dif:usize,
+	ord:Ordering,
+}
 
-	#[derive(Clone, Copy, Debug)]
-	struct Delta {
-		diff:usize,
-		ord:Ordering,
-	}
-
-	impl From<Pair> for Delta {
-		fn from((n1,n2):Pair) -> Self {
-			Delta {
-				diff: n2.abs_diff(n1),
-				ord: n2.cmp(&n1)
-			}
+impl From<Pair> for Delta {
+	fn from((n1,n2):Pair) -> Self {
+		Delta {
+			dif: n2.abs_diff(n1),
+			ord: n2.cmp(&n1)
 		}
 	}
+}
 
-	use itertools::*;
+struct Deltas<'a>(Box<dyn Iterator<Item=Delta> + 'a>);
+
+impl<'a,T:Iterator<Item=&'a usize> + 'a> From<T> for Deltas<'a> {
+	fn from(value: T) -> Self {
+		use itertools::*;
+		let i = value.into_iter().copied().tuple_windows::<Pair>().map(Delta::from);
+		Self(Box::new(i))
+	}
+}
+
+impl<'a> Iterator for Deltas<'a> {
+	type Item = Delta;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.0.next()
+	}
+}
+
+const SAFETY_RANGE:std::ops::RangeInclusive<usize> = 1..=3;
+
+pub fn is_safe<'a>(report: impl IntoIterator<Item=&'a usize> + 'a) -> bool {
+
+	use std::cmp::Ordering;
+
+	let mut deltas = Deltas::from(report.into_iter());
+
+	deltas.try_fold(Ordering::Equal, |ord_prev, Delta { dif, ord }| {
+
+		let safe = SAFETY_RANGE.contains(&dif) && (ord_prev == Ordering::Equal || ord_prev == ord );
+
+		if safe { Some(ord) } else { None }
+
+	}).is_some() // it folded
+}
+
+pub fn solve_1(input: &str) -> String {
 
 	let lines = Input(input).parse_iter(line::levels);
 
-	const SAFE_RANGE:std::ops::RangeInclusive<usize> = 1..=3;
+	let safe_reports = lines.filter(|l| is_safe(l));
 
-	let valid_count = lines.map(|levels| {
-		// Convert pairs of level values into Delta value
-		let mut deltas = levels.into_iter().tuple_windows::<Pair>().map(Delta::from);
-		// Try to convert sequence into a single ordering value, if deltas are within a safe range
-		deltas.try_fold(Ordering::Equal, |overall_ord, Delta { diff, ord }| {
-			if SAFE_RANGE.contains(&diff) && (overall_ord == Ordering::Equal || overall_ord == ord ) {
-				Some(ord)
-			} else {
-				None
-			}
-		})
-	}).flatten().count();
-
-	valid_count.to_string()
+	safe_reports.count().to_string()
 }
 
 mod test {
