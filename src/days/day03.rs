@@ -78,7 +78,7 @@ fn ops_from(mut input: &str) -> impl Iterator<Item=Op> {
 	ops.into_iter()
 }
 
-pub fn solve_1(input: &str) -> String {
+fn solve_1(input: &str) -> String {
 
 	let lines = Input(input).lines();
 
@@ -96,7 +96,7 @@ pub fn solve_1(input: &str) -> String {
 	}).sum::<usize>().to_string()
 }
 
-pub fn solve_2(input: &str) -> String {
+fn solve_2(input: &str) -> String {
 
 	let lines = Input(input).lines();
 

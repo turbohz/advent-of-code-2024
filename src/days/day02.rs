@@ -74,7 +74,7 @@ pub fn is_safe<'a>(report: impl IntoIterator<Item=&'a usize> + 'a) -> bool {
 	}).is_some() // it folded
 }
 
-pub fn solve_1(input: &str) -> String {
+fn solve_1(input: &str) -> String {
 
 	let lines = Input(input).parse_iter(line::levels);
 

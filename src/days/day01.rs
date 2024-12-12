@@ -23,7 +23,7 @@ peg::parser!{
 	}
 }
 
-pub fn solve_1(input: &str) -> String {
+fn solve_1(input: &str) -> String {
 
 	let (mut left, mut right):(Vec<usize>,Vec<usize>) = Input(input).parse_iter(line::pair)
 		.unzip();
@@ -39,7 +39,7 @@ pub fn solve_1(input: &str) -> String {
 	sum.to_string()
 }
 
-pub fn solve_2(input: &str) -> String {
+fn solve_2(input: &str) -> String {
 
 	let (left, right):(Vec<usize>,Vec<usize>) = Input(input).parse_iter(line::pair)
 		.unzip();
