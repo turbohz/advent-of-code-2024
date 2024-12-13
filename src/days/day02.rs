@@ -83,6 +83,35 @@ fn solve_1(input: &str) -> String {
 	safe_reports.count().to_string()
 }
 
+fn solve_2(input: &str) -> String {
+
+	let lines = Input(input).parse_iter(line::levels);
+
+	let safe_reports = lines.filter(|full_report| {
+
+		// try full report
+
+		is_safe(full_report) || {
+
+			// try variations of the report, removing a single element
+
+			let enum_report = full_report.into_iter().enumerate();
+
+			for i in 0..full_report.len() {
+
+				let variation = enum_report.clone()
+					.filter_map(|(at,v)| if at != i { Some(v)} else { None });
+
+				if is_safe(variation) { return true }
+			}
+
+			false
+		}
+	});
+
+	safe_reports.count().to_string()
+}
+
 mod test {
 
 	use super::*;
@@ -107,8 +136,17 @@ mod test {
 	}
 
 	#[test]
+	fn test_2_example() {
+
+		let expected : &str = "4";
+		let actual = solve_2(EXAMPLE_INPUT);
+		assert_eq!(actual, expected);
+	}
+
+	#[test]
 	fn test_submit()-> Result<(), AppError> {
 		try_submit(Day(2), solve_1, Part1)?;
+		try_submit(Day(2), solve_2, Part2)?;
 		Ok(())
 	}
 }
