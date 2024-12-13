@@ -1,5 +1,6 @@
 // https://adventofcode.com/2024/day/2
 
+use std::cmp::Ordering;
 use super::*;
 
 type Levels = Vec<usize>;
@@ -60,8 +61,6 @@ impl<'a> Iterator for Deltas<'a> {
 const SAFETY_RANGE:std::ops::RangeInclusive<usize> = 1..=3;
 
 pub fn is_safe<'a>(report: impl IntoIterator<Item=&'a usize> + 'a) -> bool {
-
-	use std::cmp::Ordering;
 
 	let mut deltas = Deltas::from(report.into_iter());
 
