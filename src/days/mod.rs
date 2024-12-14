@@ -28,7 +28,7 @@ struct Input<'a>(&'a str);
 impl<'a> Input<'a> {
 
 	// Return an iterator of lines in the input
-	fn lines(&self) -> impl Iterator<Item=&'a str> + use<'a> {
+	fn lines(&self) -> impl Clone + Iterator<Item=&'a str> + use<'a> {
 		// clean up input comming from inline examples
 		self.0.lines().map(str::trim_start).filter(|l| !l.is_empty())
 	}
