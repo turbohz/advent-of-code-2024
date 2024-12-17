@@ -58,7 +58,7 @@ peg::parser!{
 	}
 }
 
-fn ops_from(mut input: &str) -> impl Iterator<Item=Op> {
+fn ops_from(mut input: &str) -> impl Iterator<Item=Op> + use<> {
 
 	let mut ops:Vec<Op> = vec![];
 
