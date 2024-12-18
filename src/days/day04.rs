@@ -1,92 +1,101 @@
 // https://adventofcode.com/2024/day/4
 
+use std::iter::once;
 use itertools::*;
 use super::*;
 
 /// Represents a rectangle board of
 /// letters, stored as bytes.
 ///
-/// Since we want to search for words
-/// in it, in different directions,
-/// the board is surrounded by `Z`
-/// bytes (which **must** not be
-/// part of the search term)
-/// to avoid matching across its edges.
-///
-struct LetterBoard<const Z:u8> {
+struct LetterBoard {
 	content: Vec<u8>,
 	size:(usize,usize),
 }
 
-impl<const Z:u8> LetterBoard<Z> {
+impl LetterBoard {
 
-	fn horizontal<'a>(&'a self) -> impl Iterator<Item=u8> + 'a {
+	fn horizontal<'a>(&'a self,fence:u8) -> impl Iterator<Item=u8> + 'a {
 		let ref content = self.content;
-		content.into_iter().copied()
+		let (width,_) = self.size;
+		// add sentinel value at end of each row
+		content.chunks(width).map(move |chunk| chunk.iter().copied().chain(once(fence))).flatten()
 	}
 
-	fn diagonal_1<'a>(&'a self) -> impl Iterator<Item=u8> + 'a {
+	fn diagonal_1<'a>(&'a self, fence:u8) -> impl Iterator<Item=u8> + 'a {
 		let (width,height) = self.size;
-		let len = self.content.len();
 		let ref content = self.content;
 
-		(0..len).map(move |i| {
-			let col = i/height;
-			let x = (col + i%height)%width;
-			let y = i%height; // downward
-			let offset = y*width+x;
-			content[offset]
+		//increased lengths to account for fences
+		let fwidth = width+1;
+		let fheight = height+1;
+
+		(0..fwidth*fheight).map(move |i| {
+			// increase each cycle
+			let col = i/fheight;
+			let x = (col + i%fheight)%fwidth;
+			let y = i%fheight; // downward
+
+			// fence bytes at right and bottom
+			if x == width || y == height {
+				fence
+			} else {
+				let offset = y*width+x;
+				content[offset]
+			}
 		})
 	}
 
-	fn diagonal_2<'a>(&'a self) -> impl Iterator<Item=u8> + 'a {
+	fn diagonal_2<'a>(&'a self,fence:u8) -> impl Iterator<Item=u8> + 'a {
 		let (width,height) = self.size;
-		let len = self.content.len();
 		let ref content = self.content;
 
-		(0..len).map(move |i| {
-			let col = i/height;
-			let x = (col + i%height)%width;
-			let y = (height-1)-(i%height); // upward
-			let offset = y*width+x;
-			content[offset]
+		//increased lengths to account for fences
+		let fwidth = width+1;
+		let fheight = height+1;
+
+		(0..fwidth*fheight).map(move |i| {
+			// increase each cycle
+			let col = i/fheight;
+			let x = (col + i%fheight)%fwidth;
+			let y = (fheight-1)-(i%fheight); // upward
+
+			// fence bytes at right and top
+			if x == width || y == 0 {
+				fence
+			} else {
+				// correct y to ignore top
+				let offset = (y-1)*width+x;
+				content[offset]
+			}
 		})
 	}
 
-	fn vertical<'a>(&'a self) -> impl Iterator<Item=u8> + 'a {
+	fn vertical<'a>(&'a self,fence:u8) -> impl Iterator<Item=u8> + 'a {
 
 		let (width,height) = self.size;
-		let len = self.content.len();
 		let ref content = self.content;
 
-		(0..len).map(move |i| {
-			// sequence of offsets to the vec
-			// to obtain the elements in a sequence per column
-			let offset = i*width%len + i/height;
-			content[offset]
+		(0..width).cartesian_product(0..=height).map(move |(x,y)| {
+			if y == height {
+				fence
+			} else{
+				let offset = y*width+x;
+				content[offset]
+			}
 		})
 	}
 }
 
-impl<'a,const Z:u8> From<Input<'a>> for LetterBoard<Z> {
+
+impl<'a> From<Input<'a>> for LetterBoard {
 
 	fn from(input:Input) -> Self {
 
-		use std::iter::once;
-		use itertools::chain;
-
 		let rows = input.lines().map(str::bytes);
-		// clone iterator, measure line width, add one for the sentinel byte 'Z'
-		let width = rows.clone().into_iter().take(1).flatten().count() + 2;
+		// clone iterator, measure line width
+		let width = rows.clone().into_iter().take(1).flatten().count();
 
-		let content:Vec<u8> = chain!(
-			// initial line of 'Z' sentinel bytes
-			repeat_n(Z, width),
-			// add 'Z' sentinel byte at the end of each row
-			rows.map(|row| chain!(once(Z),row,once(Z))).flatten(),
-			// final line of 'Z' sentinel bytes
-			repeat_n(Z, width)
-		).collect();
+		let content:Vec<u8> = rows.flatten().collect();
 
 		// compute height
 		let height = content.len() / width;
@@ -102,7 +111,7 @@ fn solve_1(input: &str) -> String {
 		let forward:Vec<u8>  = word.into();
 		let backward:Vec<u8> = forward.iter().rev().copied().collect();
 
-      // load bytes of first possible match into a "buffer"
+		// load bytes of first possible match into a "buffer"
 		let mut window:Vec<u8> = input.take(word.len()).collect();
 		let mut count:usize = 0;
 
@@ -124,14 +133,15 @@ fn solve_1(input: &str) -> String {
 		}
 	}
 
-	let board = LetterBoard::<b'.'>::from(Input(input));
+	let board = LetterBoard::from(Input(input));
 	let word = "XMAS";
 
 	let mut count = 0;
-	count += count_matches(word.as_ref(), &mut board.horizontal());
-	count += count_matches(word.as_ref(), &mut board.vertical());
-	count += count_matches(word.as_ref(), &mut board.diagonal_1());
-	count += count_matches(word.as_ref(), &mut board.diagonal_2());
+	const FENCE:u8 = b'.';
+	count += count_matches(word.as_ref(), &mut board.horizontal(FENCE));
+	count += count_matches(word.as_ref(), &mut board.vertical(FENCE));
+	count += count_matches(word.as_ref(), &mut board.diagonal_1(FENCE));
+	count += count_matches(word.as_ref(), &mut board.diagonal_2(FENCE));
 
 	count.to_string()
 }
@@ -142,13 +152,13 @@ mod test {
 	use aoc_driver::Part::*;
 	use super::*;
 
-	impl<const Z:u8> Display for LetterBoard<Z> {
+	impl Display for LetterBoard {
 			fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 				write!(f, "{}", self.lines().format("\n"))
 			}
 	}
 
-	impl<const Z:u8> LetterBoard<Z> {
+	impl LetterBoard {
 
 		fn lines(&self) -> impl Iterator<Item=&str> {
 			use std::str::from_utf8;
@@ -189,33 +199,33 @@ mod test {
 			IJKL
 			"###;
 
-		let board = LetterBoard::<b'.'>::from(Input(INPUT));
-		assert_eq!(board.len(),30);
+		let board = LetterBoard::from(Input(INPUT));
+		assert_eq!(board.len(),12);
 
 		// test horizontal
 
 		// 5 rows of 6 items
-		let expected = "...... .ABCD. .EFGH. .IJKL. ......".replace(" ", "");
-		let actual = string(board.horizontal());
+		let expected = "ABCD.EFGH.IJKL.";
+		let actual   = string(board.horizontal(b'.'));
 		assert_eq!(actual, expected);
 
 		// test vertical
 
 		// 6 columns of 5 items
-		let expected = "..... .AEI. .BFJ. .CGK. .DHL. .....".replace(" ", "");
-		let actual = string(board.vertical());
+		let expected = "AEI.BFJ.CGK.DHL.";
+		let actual   = string(board.vertical(b'.'));
 		assert_eq!(actual, expected);
 
 		// test diagonals
 
 		// LTR "downward" strips
-		let expected = ".AFK. .BGL. .CH.. .D... ...I. ..EJ.".replace(" ", "");
-		let actual = string(board.diagonal_1());
+		let expected = "AFK.BGL.CH..D.I..EJ.";
+		let actual   = string(board.diagonal_1(b'.'));
 		assert_eq!(actual, expected);
 
 		// LTR "upward" strips
-		let expected = ".IFC. .JGD. .KH.. .L... ...A. ..EB.".replace(" ", "");
-		let actual = string(board.diagonal_2());
+		let expected = "IFC.JGD.KH..L.A..EB.";
+		let actual   = string(board.diagonal_2(b'.'));
 		assert_eq!(actual, expected);
 	}
 
