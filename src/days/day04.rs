@@ -84,6 +84,34 @@ impl LetterBoard {
 			}
 		})
 	}
+
+	fn chunks<'a>(&'a self,size:usize) -> Result<impl 'a + Iterator<Item=Vec<u8>>,String>  {
+
+		let (width,height) = self.size;
+
+		if width < size || height < size {
+			return Err(format!("Can't make chunks of {size} off a board of {width}x{height}"));
+		}
+
+		let ref content = self.content;
+
+		// chunk origins
+		Ok(
+			(0..=width-size).cartesian_product(0..=height-size)
+				.map(move |(x,y)| {
+
+					// chunk rows
+					(y..y+size)
+						.map(move |y| {
+							let offset = y*width+x;
+							let ref row = content[offset..offset+size];
+							row.into_iter().copied()
+						})
+						.flatten()
+						.collect()
+				})
+		)
+	}
 }
 
 
@@ -145,6 +173,28 @@ fn solve_1(input: &str) -> String {
 
 	count.to_string()
 }
+
+fn solve_2(input: &str) -> String {
+
+	let board = LetterBoard::from(Input(input));
+
+	let chunks = board.chunks(3).unwrap();
+
+	let count = chunks
+		.filter(|c| {
+			// 'A' at the center
+			c[4] == b'A' &&
+			c[0] != c[8] &&
+			c[6] != c[2] &&
+			[c[0],c[2],c[6],c[8]].into_iter().all(|c| {
+				c == b'M' || c == b'S'
+			})
+		})
+		.count();
+
+	count.to_string()
+}
+
 
 #[cfg(test)]
 mod test {
@@ -227,6 +277,11 @@ mod test {
 		let expected = "IFC.JGD.KH..L.A..EB.";
 		let actual   = string(board.diagonal_2(b'.'));
 		assert_eq!(actual, expected);
+
+		// 3x3 Chunks
+		let expected = vec!["ABCEFGIJK","BCDFGHJKL"];
+		let actual:Vec<String> = board.chunks(3).unwrap().map(|v| string(v.into_iter())).collect();
+		assert_eq!(actual,expected);
 	}
 
 	#[test]
@@ -238,9 +293,18 @@ mod test {
 	}
 
 	#[test]
+	fn part_2_example() {
+
+		let actual:String = solve_2(EXAMPLE_INPUT);
+		let expected : &str = "9";
+
+		assert_eq!(actual, expected);
+	}
+
+	#[test]
 	fn test_submit()-> Result<(), AppError> {
 		try_submit(Day(4), solve_1, Part1)?;
-		// try_submit(Day(4), solve_2, Part2)?;
+		try_submit(Day(4), solve_2, Part2)?;
 		Ok(())
 	}
 }
