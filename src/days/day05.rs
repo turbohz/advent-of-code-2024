@@ -2,7 +2,6 @@
 
 use std::ops::{Deref, DerefMut};
 
-use itertools::*;
 use super::*;
 
 #[derive(Debug,Clone,Copy)]
@@ -30,9 +29,9 @@ impl DerefMut for RuleSet {
 }
 
 impl RuleSet {
-	fn applicable_to<'a>(&'a self, update:&'a Update) -> impl Iterator<Item=&'a Rule> {
+	fn applicable_to<'a>(&'a self, update:&'a Update) -> impl Iterator<Item=&'a Rule> + Clone {
 		self.iter().filter(|Rule(a,b)| {
-			update.contains(&a) &&  update.contains(&b)
+			update.contains(&a) && update.contains(&b)
 		})
 	}
 }
@@ -44,6 +43,12 @@ impl Deref for Update {
 	type Target = Vec<u8>;
 	fn deref(&self) -> &Self::Target {
 		&self.0
+	}
+}
+
+impl DerefMut for Update {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
 	}
 }
 
@@ -73,6 +78,52 @@ peg::parser!{
 		pub rule pages() -> Update
 			= p:(number() ** ",") { Update(p) }
 	}
+}
+
+fn solve_1(input: &str) -> String {
+
+	use core::iter::once;
+
+	// empty line separating rules from
+	// pages lists gets removed by lines()
+	let mut lines = Input(input).lines();
+
+	let mut rules:RuleSet = RuleSet(vec![]);
+
+	let updates = loop {
+
+		let line = lines.next()
+			.expect("Rules should precede start of update lines (which breaks the loop");
+
+		if let Ok(rule) = rules::pair(line) {
+			rules.push(rule);
+		} else {
+			// The first update line has been
+			// consumed, so must be reinserted
+			break once(line).chain(lines)
+				// create an iterator of Update
+				.map(|line| update::pages(line).unwrap());
+		}
+
+	};
+
+	updates
+		.filter(|update| {
+			let rules = rules.applicable_to(&update);
+
+			update.is_sorted_by(|a,b| {
+				rules.to_owned().any(|Rule(x,y)| {
+					x == a && y == b
+				})
+			})
+		})
+		.map(|update| {
+			let middle = (update.len()-1) / 2;
+			update[middle] as usize
+		})
+		.sum::<usize>()
+		.to_string()
+
 }
 
 mod test {
@@ -113,39 +164,19 @@ mod test {
 		"###;
 
 	#[test]
-	fn test() {
+	fn part_1_example() {
 
-		use core::iter::once;
+		let expected : &str = "143";
+		let actual:String = solve_1(INPUT_EXAMPLE);
 
-		// empty line separating rules from
-		// pages lists gets removed by lines()
-		let mut lines = Input(INPUT_EXAMPLE).lines();
-
-		let mut rules:RuleSet = RuleSet(vec![]);
-
-		let updates = loop {
-
-			let line = lines.next()
-				.expect("Rules should precede start of update lines (which breaks the loop");
-
-			if let Ok(rule) = rules::pair(line) {
-				rules.push(rule);
-			} else {
-				// empty line has been stripped,
-				// and the update line has been
-				// consumed, so must be reinserted
-				break once(line).chain(lines)
-					// create an iterator of Update
-					.map(|line| update::pages(line).unwrap());
-			}
-
-		};
-
-		for update in updates {
-			println!("{:?}",update);
-			println!("{:?}",rules.applicable_to(&update).collect::<Vec<_>>())
-		}
-
-		todo!()
+		assert_eq!(actual, expected);
 	}
+
+	#[test]
+	fn test_submit()-> Result<(), AppError> {
+		try_submit(Day(5), solve_1, Part1)?;
+		// try_submit(Day(4), solve_2, Part2)?;
+		Ok(())
+	}
+
 }
