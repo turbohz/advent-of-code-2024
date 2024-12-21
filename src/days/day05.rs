@@ -80,7 +80,7 @@ peg::parser!{
 	}
 }
 
-fn solve_1(input: &str) -> String {
+fn parse(input: &str)-> (RuleSet,impl Iterator<Item=Update>) {
 
 	use core::iter::once;
 
@@ -107,23 +107,49 @@ fn solve_1(input: &str) -> String {
 
 	};
 
-	updates
-		.filter(|update| {
-			let rules = rules.applicable_to(&update);
+	(rules,updates)
+}
 
-			update.is_sorted_by(|a,b| {
-				rules.to_owned().any(|Rule(x,y)| {
-					x == a && y == b
-				})
-			})
+enum ValidatedUpdate {
+	Sorted(Update),
+	Unsorted(Update)
+}
+
+fn validate_updates(rules: &RuleSet, updates:impl Iterator<Item=Update>) -> impl Iterator<Item=ValidatedUpdate> {
+	updates
+		.map(|update| {
+
+			let sorted = {
+				let rules = rules.applicable_to(&update);
+				update.is_sorted_by(|a,b|
+					rules.to_owned().any(|Rule(x,y)| x == a && y == b)
+				)
+			};
+
+			if sorted {
+				ValidatedUpdate::Sorted(update)
+			} else {
+				ValidatedUpdate::Unsorted(update)
+			}
 		})
+}
+
+fn solve_1(input: &str) -> String {
+
+	let (rules,updates) = parse(input);
+
+	validate_updates(&rules, updates)
+		.filter_map(|update|
+			match update {
+				ValidatedUpdate::Sorted(u) => Some(u),
+				_ => None
+			})
 		.map(|update| {
 			let middle = (update.len()-1) / 2;
 			update[middle] as usize
 		})
 		.sum::<usize>()
 		.to_string()
-
 }
 
 mod test {
