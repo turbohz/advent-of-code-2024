@@ -1,6 +1,6 @@
 // https://adventofcode.com/2024/day/5
 
-use std::ops::{Deref, DerefMut};
+use std::{cmp::Ordering, ops::{Deref, DerefMut}};
 
 use super::*;
 
@@ -29,8 +29,8 @@ impl DerefMut for RuleSet {
 }
 
 impl RuleSet {
-	fn applicable_to<'a>(&'a self, update:&'a Update) -> impl Iterator<Item=&'a Rule> + Clone {
-		self.iter().filter(|Rule(a,b)| {
+	fn applicable_to(&self, update:&Update) -> impl Iterator<Item=Rule> + Clone {
+		self.iter().copied().filter(|Rule(a,b)| {
 			update.contains(&a) && update.contains(&b)
 		})
 	}
@@ -121,7 +121,7 @@ fn validate_updates(rules: &RuleSet, updates:impl Iterator<Item=Update>) -> impl
 
 			let sorted = {
 				let rules = rules.applicable_to(&update);
-				update.is_sorted_by(|a,b|
+				update.is_sorted_by(|&a,&b|
 					rules.to_owned().any(|Rule(x,y)| x == a && y == b)
 				)
 			};
@@ -145,6 +145,45 @@ fn solve_1(input: &str) -> String {
 				_ => None
 			})
 		.map(|update| {
+			let middle = (update.len()-1) / 2;
+			update[middle] as usize
+		})
+		.sum::<usize>()
+		.to_string()
+}
+
+fn solve_2(input: &str) -> String {
+
+	let (rules,updates) = parse(input);
+
+	validate_updates(&rules, updates)
+		.filter_map(|update|
+			match update {
+				ValidatedUpdate::Unsorted(u) => Some(u),
+				_ => None
+			}
+		)
+		.inspect(|u| println!("{:?}",u))
+		.map(|mut update| {
+
+			let rules:RuleSet = rules.applicable_to(&update).collect::<Vec<Rule>>().into();
+
+			update.sort_by(|a,b| {
+
+				rules.iter().find_map(|Rule(x,y)|
+					if x == a && y == b {
+						Some(Ordering::Less)
+					} else if x == b && y == a {
+						Some(Ordering::Greater)
+					} else {
+						None
+					}
+				).or_else(|| {
+					panic!("No rule found for pair {a},{b}!");
+				}).unwrap()
+
+			});
+
 			let middle = (update.len()-1) / 2;
 			update[middle] as usize
 		})
@@ -199,9 +238,18 @@ mod test {
 	}
 
 	#[test]
+	fn part_2_example() {
+
+		let expected : &str = "123";
+		let actual:String = solve_2(INPUT_EXAMPLE);
+
+		assert_eq!(actual, expected);
+	}
+
+	#[test]
 	fn test_submit()-> Result<(), AppError> {
 		try_submit(Day(5), solve_1, Part1)?;
-		// try_submit(Day(4), solve_2, Part2)?;
+		try_submit(Day(5), solve_2, Part2)?;
 		Ok(())
 	}
 
