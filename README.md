@@ -13,5 +13,7 @@ the intention is to choose approches that are interesting to me.
 Here's a list of ideas and techniques motivating their implementation:
 
 - Parsing using [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar)s
-- Chaining iterators remaining _lazy_ as much as possible
+- Chaining iterators, remaining _lazy_ as much as possible
 - Testing the features for the current beta of [Rust 2024](https://doc.rust-lang.org/nightly/edition-guide/rust-2024/index.html) edition
+- Implementing part 2 of each problem
+- Using no crates, other that [peg](https://crates.io/crates/peg) and [Itertools](https://crates.io/crates/itertools)
