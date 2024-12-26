@@ -67,7 +67,7 @@ mod test {
 		"###;
 
 	#[test]
-	fn test_1_example() {
+	fn part_1_example() {
 
 		let expected : &str = "11";
 		let actual = solve_1(EXAMPLE_INPUT);
@@ -75,7 +75,7 @@ mod test {
 	}
 
 	#[test]
-	fn test_2_example() {
+	fn part_2_example() {
 
 		let expected : &str = "31";
 		let actual = solve_2(EXAMPLE_INPUT);
@@ -83,7 +83,7 @@ mod test {
 	}
 
 	#[test]
-	fn test_submit()-> Result<(), AppError> {
+	fn submit()-> Result<(), AppError> {
 		try_submit(Day(1), solve_1, Part1)?;
 		try_submit(Day(1), solve_2, Part2)?;
 		Ok(())

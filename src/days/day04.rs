@@ -301,7 +301,7 @@ mod test {
 	}
 
 	#[test]
-	fn test_submit()-> Result<(), AppError> {
+	fn submit()-> Result<(), AppError> {
 		try_submit(Day(4), solve_1, Part1)?;
 		try_submit(Day(4), solve_2, Part2)?;
 		Ok(())
