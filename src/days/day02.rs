@@ -44,7 +44,6 @@ struct Deltas<'a>(Box<dyn Iterator<Item=Delta> + 'a>);
 
 impl<'a,T:Iterator<Item=&'a usize> + 'a> From<T> for Deltas<'a> {
 	fn from(value: T) -> Self {
-		use itertools::*;
 		let i = value.into_iter().copied().tuple_windows::<Pair>().map(Delta::from);
 		Self(Box::new(i))
 	}

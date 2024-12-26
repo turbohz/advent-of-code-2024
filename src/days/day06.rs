@@ -1,8 +1,6 @@
 // https://adventofcode.com/2024/day/6
 
 use std::{iter::{repeat,once}, ops::Index};
-use itertools::Itertools;
-
 use super::*;
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq)]

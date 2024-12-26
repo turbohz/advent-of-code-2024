@@ -1,7 +1,6 @@
 // https://adventofcode.com/2024/day/4
 
 use std::iter::once;
-use itertools::*;
 use super::*;
 
 /// Represents a rectangle board of

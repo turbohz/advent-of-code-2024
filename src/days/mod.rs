@@ -5,6 +5,8 @@ mod day04;
 mod day05;
 mod day06;
 
+pub(self) use itertools::Itertools;
+
 use std::fmt::Display;
 
 use super::*;
