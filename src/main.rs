@@ -6,6 +6,9 @@ pub use std::convert::identity;
 #[cfg(test)]
 mod days;
 
+#[cfg(test)]
+mod common;
+
 pub const YEAR:i32 = 2024;
 
 #[allow(unused)]

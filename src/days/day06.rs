@@ -1,6 +1,6 @@
 // https://adventofcode.com/2024/day/6
 
-use std::{iter::{repeat,once}, ops::Index};
+use std::{iter::{once, repeat}, ops::Deref};
 use super::*;
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq)]
@@ -10,9 +10,6 @@ enum Direction {
 	South,
 	West,
 }
-
-#[derive(Debug,Clone,Copy,PartialEq,Eq)]
-struct Position(usize,usize);
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq)]
 struct GuardState {
@@ -26,46 +23,14 @@ impl Default for GuardState {
 	}
 }
 
-#[derive(Debug, Clone, Copy)]
-struct Field {
-	pub width: usize,
-	pub height: usize,
-}
+struct Room(Map);
 
-impl From<(usize,usize)> for Field {
-	fn from(size: (usize,usize)) -> Self {
-		Self { width: size.0, height: size.1 }
+impl Deref for Room {
+	type Target = Map;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
 	}
-}
-
-impl Field {
-
-	pub fn size(&self)->(usize,usize) {
-		(self.width,self.height)
-	}
-
-	#[inline]
-	pub fn stride(&self) -> usize {
-		self.width
-	}
-
-	pub fn offset_of(&self, Position(x,y):Position) -> usize {
-		y*self.stride()+x
-	}
-
-	pub fn position_of(&self, offset:usize) -> Position {
-		let stride = self.stride();
-		Position(offset % stride, offset / stride)
-	}
-
-	pub fn last_position(&self) -> Position {
-		Position(self.width-1,self.height-1)
-	}
-}
-
-struct Room {
-	field: Field,
-	data: Vec<u8>
 }
 
 impl Room {
@@ -93,13 +58,6 @@ impl Room {
 	}
 }
 
-impl Index<Position> for Room {
-	type Output = u8;
-	fn index(&self, p: Position) -> &Self::Output {
-		&self.data[self.field.offset_of(p)]
-	}
-}
-
 struct Simulation<'a> {
 	room: Room,
 	guard_state: GuardState,
@@ -110,13 +68,7 @@ impl<'a, L:Iterator<Item=&'a str>+Clone> From<L> for Simulation<'a> {
 
 	fn from(lines:L)-> Self {
 
-		let rows = lines.map(str::bytes);
-		// clone iterator, measure line width
-		let width = rows.clone().into_iter().take(1).flatten().count();
-
-		let data:Vec<u8> = rows.flatten().collect();
-		let height = data.len() / width;
-		let room = Room { field: (width,height).into(), data };
+		let room = Room(Map::from(lines));
 
 		let initial_guard_state = {
 			GuardState { location: room.start_position(), ..Default::default() }
