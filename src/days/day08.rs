@@ -96,6 +96,13 @@ impl From<Position> for V2 {
 	}
 }
 
+impl From<V2> for Position {
+	fn from(v2: V2) -> Self {
+		let V2(x,y) = v2;
+		Position(x as usize, y as usize)
+	}
+}
+
 fn solve_1(input: &str) -> String {
 
 	let city = City(Map::from(Input(input).lines()));
@@ -136,6 +143,54 @@ fn solve_1(input: &str) -> String {
 
 }
 
+fn solve_2(input: &str) -> String {
+
+	let city = City(Map::from(Input(input).lines()));
+
+	fn antinodes(a:V2,b:V2,city:&City) -> impl IntoIterator<Item=Position> {
+
+		let (max_x,max_y) = {
+			let Position(max_x,max_y) = city.field.last_position();
+			(max_x as isize,max_y as isize)
+		};
+		let inc = b-a;
+		let mut antinode = b;
+		// antinodes generated from antennae a -> b
+		// that fall inside the city limits
+		std::iter::from_fn(move || {
+			antinode = antinode+inc;
+			match antinode {
+				V2(x,_) if x < 0 => None,
+				V2(x,_) if x > max_x as isize => None,
+
+				V2(_,y) if y < 0 => None,
+				V2(_,y) if y > max_y as isize => None,
+
+				_ => Some(antinode)
+			}
+		})
+		// Plus the two antennae
+		.chain([a,b].into_iter()).map(Position::from)
+	}
+
+	// Gather all pairs of antennae with the same frequency
+
+	let antenna_combos = city.frequencies().flat_map(|c| {
+		city.antennae().filter(move |a| a.frequency == c).combinations(2)
+	});
+
+	let anti_nodes = antenna_combos.flat_map(|c| {
+		c.into_iter().map(V2::from).permutations(2).flat_map(|vecs| antinodes(vecs[0], vecs[1], &city))
+	});
+
+	anti_nodes
+		.sorted()
+		.dedup()
+		.count()
+		.to_string()
+}
+
+
 mod test {
 
 	use super::*;
@@ -167,9 +222,18 @@ mod test {
 	}
 
 	#[test]
+	fn part_2_example() {
+
+		let expected = "34";
+		let actual = solve_2(INPUT_EXAMPLE);
+
+		assert_eq!(actual,expected);
+	}
+
+	#[test]
 	fn submit()-> Result<(), AppError> {
 		try_submit(Day(8), solve_1, Part1)?;
-		// try_submit(Day(6), solve_2, Part2)?;
+		try_submit(Day(8), solve_2, Part2)?;
 		Ok(())
 	}
 }
