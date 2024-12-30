@@ -1,16 +1,13 @@
 // https://adventofcode.com/2024/day/7
 
 use super::*;
+use std::iter::repeat_n;
 
 #[derive(Debug,Clone,Copy)]
 enum Op {
 	Plus,
-	Times
-}
-
-fn op_combinations(n:usize) -> impl Iterator<Item=Vec<Op>> {
-	use std::iter::repeat_n;
-	repeat_n([Op::Plus,Op::Times].into_iter(),n).multi_cartesian_product()
+	Times,
+	Concat,
 }
 
 #[derive(Debug)]
@@ -21,13 +18,19 @@ struct Equation {
 
 impl Equation {
 	pub fn try_solve_with(&self,ops:&Vec<Op>) -> Result<usize,()> {
+
+		fn digits(n:usize) -> u32 {
+			1 + n.ilog10()
+		}
+
 		let &first = self.operands.first().expect("There should be a first operand");
 		let result = self.operands.iter()
 			.skip(1).zip(ops)
 			.fold(first,|acc,(n,o)|
 				match o {
 					Op::Plus => acc + n,
-					Op::Times => acc * n
+					Op::Times => acc * n,
+					Op::Concat => acc * 10usize.pow(digits(*n)) + n,
 				}.to_owned()
 			);
 
@@ -61,11 +64,28 @@ peg::parser!{
 fn solve_1(input: &str) -> String {
 
 	let equations = Input(input).parse_iter(line::equation);
+	let ops = [Op::Plus,Op::Times];
 
 	equations.filter_map(|eq| {
-		let found = op_combinations(eq.operands.len()- 1)
-			.any(|ref ops| eq.try_solve_with(ops).is_ok());
-	 	if found { Some(eq.target) } else { None }
+		let total_ops = eq.operands.len()- 1;
+		let mut op_combos = repeat_n(ops.iter().copied(),total_ops).multi_cartesian_product();
+		let found = op_combos.any(|ref ops| eq.try_solve_with(ops).is_ok());
+		if found { Some(eq.target) } else { None }
+	})
+	.sum::<usize>()
+	.to_string()
+}
+
+fn solve_2(input: &str) -> String {
+
+	let equations = Input(input).parse_iter(line::equation);
+	let ops_ext = [Op::Plus,Op::Times,Op::Concat];
+
+	equations.filter_map(|eq| {
+		let total_ops = eq.operands.len()- 1;
+		let mut op_combos = repeat_n(ops_ext.iter().copied(),total_ops).multi_cartesian_product();
+		let found =	op_combos.any(|ref ops| eq.try_solve_with(ops).is_ok());
+		if found { Some(eq.target) } else { None }
 	})
 	.sum::<usize>()
 	.to_string()
@@ -90,16 +110,23 @@ mod test {
 		"###;
 
 	#[test]
-	fn test() {
+	fn part_1_example() {
 		let expected = "3749";
 		let actual = solve_1(INPUT_EXAMPLE);
 		assert_eq!(actual,expected);
 	}
 
 	#[test]
+	fn part_2_example() {
+		let expected = "11387";
+		let actual = solve_2(INPUT_EXAMPLE);
+		assert_eq!(actual,expected);
+	}
+
+	#[test]
 	fn submit()-> Result<(), AppError> {
 		try_submit(Day(7), solve_1, Part1)?;
-		// try_submit(Day(7), solve_2, Part2)?;
+		try_submit(Day(7), solve_2, Part2)?;
 		Ok(())
 	}
 }
