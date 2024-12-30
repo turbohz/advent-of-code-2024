@@ -6,7 +6,7 @@ use super::*;
 
 #[derive(Clone, Copy)]
 struct Antenna {
-	code:u8,
+	frequency:u8,
 	location:Position
 }
 
@@ -21,7 +21,7 @@ impl TryFrom<u8> for Antenna {
 
 	fn try_from(code: u8) -> Result<Self, Self::Error> {
 		if code.is_ascii_alphanumeric() {
-			Ok(Antenna { code, location: Default::default() })
+			Ok(Antenna { frequency: code, location: Default::default() })
 		} else {
 			Err(())
 		}
@@ -55,8 +55,8 @@ impl City {
 			})
 	}
 
-	pub fn codes<'a>(&'a self) -> impl Iterator<Item=u8> + 'a {
-		self.antennae().map(|a| a.code).sorted().dedup()
+	pub fn frequencies<'a>(&'a self) -> impl Iterator<Item=u8> + 'a {
+		self.antennae().map(|a| a.frequency).sorted().dedup()
 	}
 }
 
@@ -102,8 +102,8 @@ fn solve_1(input: &str) -> String {
 
 	// Gather all pairs of antennae with the same frequency
 
-	let antenna_combos = city.codes().flat_map(|c| {
-		city.antennae().filter(move |a| a.code == c).combinations(2)
+	let antenna_combos = city.frequencies().flat_map(|c| {
+		city.antennae().filter(move |a| a.frequency == c).combinations(2)
 	});
 
 	// Find both potential anti-nodes for each pair
