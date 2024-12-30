@@ -28,9 +28,9 @@ impl TryFrom<u8> for Antenna {
 	}
 }
 
-impl From<Antenna> for Vec {
+impl From<Antenna> for V2 {
 	fn from(antenna: Antenna) -> Self {
-		Vec::from(antenna.location)
+		V2::from(antenna.location)
 	}
 }
 
@@ -61,38 +61,38 @@ impl City {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
-struct Vec(isize,isize);
+struct V2(isize,isize);
 
-impl Neg for Vec {
-	type Output = Vec;
+impl Neg for V2 {
+	type Output = V2;
 
 	fn neg(self) -> Self::Output {
-		Vec(-self.0,-self.1)
+		V2(-self.0,-self.1)
 	}
 }
 
-impl Add for Vec {
-	type Output = Vec;
+impl Add for V2 {
+	type Output = V2;
 
 	fn add(self, rhs: Self) -> Self::Output {
-		let Vec(x1,y1) = self;
-		let Vec(x2,y2) = rhs;
-		Vec(x1+x2,y1+y2)
+		let V2(x1,y1) = self;
+		let V2(x2,y2) = rhs;
+		V2(x1+x2,y1+y2)
 	}
 }
 
-impl Sub for Vec {
-	type Output = Vec;
+impl Sub for V2 {
+	type Output = V2;
 
 	fn sub(self, rhs: Self) -> Self::Output {
 		self + (-rhs)
 	}
 }
 
-impl From<Position> for Vec {
+impl From<Position> for V2 {
 	fn from(pos: Position) -> Self {
 		let Position(x,y) = pos;
-		Vec(x as isize, y as isize)
+		V2(x as isize, y as isize)
 	}
 }
 
@@ -109,7 +109,7 @@ fn solve_1(input: &str) -> String {
 	// Find both potential anti-nodes for each pair
 
 	let anti_nodes = antenna_combos.flat_map(|c| {
-		c.into_iter().map(Vec::from).permutations(2).map(|vecs| vecs[1] - vecs[0] + vecs[1])
+		c.into_iter().map(V2::from).permutations(2).map(|vecs| vecs[1] - vecs[0] + vecs[1])
 	});
 
 	// Reduce the list of potential anti-nodes
@@ -123,11 +123,11 @@ fn solve_1(input: &str) -> String {
 		.dedup()
 		.filter(|v| match *v {
 
-			Vec(x,_) if x < 0 => false,
-			Vec(x,_) if x > max_x as isize => false,
+			V2(x,_) if x < 0 => false,
+			V2(x,_) if x > max_x as isize => false,
 
-			Vec(_,y) if y < 0 => false,
-			Vec(_,y) if y > max_y as isize => false,
+			V2(_,y) if y < 0 => false,
+			V2(_,y) if y > max_y as isize => false,
 
 			_ => true
 		})
