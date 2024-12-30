@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Index};
 
-#[derive(Debug,Clone,Copy,PartialEq,Eq,Default)]
+#[derive(Debug,Clone,Copy,PartialEq,Eq,Default,Ord,PartialOrd)]
 pub struct Position(pub usize, pub usize);
 
 impl Display for Position {
