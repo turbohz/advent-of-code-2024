@@ -1,3 +1,5 @@
+cargo-features = ["edition2024"]
+
 [package]
 name = "advent-of-code-2024"
 version = "0.1.0"
