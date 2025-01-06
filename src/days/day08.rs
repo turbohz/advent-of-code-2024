@@ -46,11 +46,11 @@ impl Deref for City {
 
 impl City {
 	pub fn antennae<'a>(&'a self) -> impl Iterator<Item=Antenna> + 'a {
-		let position_of = |o| self.field.position_of(o);
-		self.data.iter().enumerate()
-			.filter_map(move |(offset,&byte)| {
+		let position_of = |o| self.position_of(o);
+		self.iter().enumerate()
+			.filter_map(move |(offset,byte)| {
 				Antenna::try_from(byte)
-					.map(|a| a.at_location(position_of(offset)))
+					.map(|a| a.at_location(position_of(offset).unwrap()))
 					.ok()
 			})
 	}
@@ -91,7 +91,7 @@ impl Sub for V2 {
 
 impl From<Position> for V2 {
 	fn from(pos: Position) -> Self {
-		let Position(x,y) = pos;
+		let Position{x,y} = pos;
 		V2(x as isize, y as isize)
 	}
 }
@@ -99,7 +99,7 @@ impl From<Position> for V2 {
 impl From<V2> for Position {
 	fn from(v2: V2) -> Self {
 		let V2(x,y) = v2;
-		Position(x as usize, y as usize)
+		Position{x: x as u16, y: y as u16}
 	}
 }
 
@@ -123,7 +123,7 @@ fn solve_1(input: &str) -> String {
 	// Must be inside the bounds, and they must
 	// be counted once (no dupes)
 
-	let Position(max_x,max_y) = city.field.last_position();
+	let max = city.last_position();
 
 	anti_nodes
 		.sorted()
@@ -131,10 +131,10 @@ fn solve_1(input: &str) -> String {
 		.filter(|v| match *v {
 
 			V2(x,_) if x < 0 => false,
-			V2(x,_) if x > max_x as isize => false,
+			V2(x,_) if x > max.x as isize => false,
 
 			V2(_,y) if y < 0 => false,
-			V2(_,y) if y > max_y as isize => false,
+			V2(_,y) if y > max.y as isize => false,
 
 			_ => true
 		})
@@ -150,8 +150,8 @@ fn solve_2(input: &str) -> String {
 	fn antinodes(a:V2,b:V2,city:&City) -> impl IntoIterator<Item=Position> {
 
 		let (max_x,max_y) = {
-			let Position(max_x,max_y) = city.field.last_position();
-			(max_x as isize,max_y as isize)
+			let max = city.last_position();
+			(max.x as isize,max.y as isize)
 		};
 		let inc = b-a;
 		let mut antinode = b;
@@ -161,10 +161,10 @@ fn solve_2(input: &str) -> String {
 			antinode = antinode+inc;
 			match antinode {
 				V2(x,_) if x < 0 => None,
-				V2(x,_) if x > max_x as isize => None,
+				V2(x,_) if x > max_x => None,
 
 				V2(_,y) if y < 0 => None,
-				V2(_,y) if y > max_y as isize => None,
+				V2(_,y) if y > max_y => None,
 
 				_ => Some(antinode)
 			}

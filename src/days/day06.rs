@@ -1,166 +1,146 @@
 // https://adventofcode.com/2024/day/6
 
-use std::{iter::{once, repeat}, ops::Deref};
+use std::iter::once;
 use super::*;
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq)]
-enum Direction {
+pub enum Direction {
 	North,
 	East,
 	South,
 	West,
 }
 
-#[derive(Debug,Clone,Copy,PartialEq,Eq)]
-struct GuardState {
-	location: Position,
-	orientation: Direction,
-}
-
-impl Default for GuardState {
+impl Default for Direction {
 	fn default() -> Self {
-		Self { location: Position(0,0), orientation: Direction::North }
+		Self::North
 	}
 }
 
-struct Room(Map);
+mod guard {
 
-impl Deref for Room {
-	type Target = Map;
+	use super::*;
 
-	fn deref(&self) -> &Self::Target {
-		&self.0
+	#[derive(Debug,Clone,Copy,PartialEq,Eq,Default)]
+	pub struct State {
+		pub location: Position,
+		pub orientation: Direction,
 	}
-}
 
-impl Room {
+	pub struct Route<'a> {
+		pub room: &'a Map,
+		pub state: State,
+		pub protocol: Box<dyn Iterator<Item=Direction>>
+	}
 
-	fn at(&self, position:Position) -> Option<u8> {
-		let (w,h) = self.field.size();
-		let Position(x,y) = position;
-		if x<w && y<h {
-			Some(self[position])
-		} else {
-			None
+	impl<'a> Route<'a> {
+		pub fn new(room:&'a Map,start:Position) -> Self {
+			use Direction::*;
+			let state = State { location: start, ..Default::default() };
+			let protocol = Box::new([North,East,South,West].into_iter().cycle());
+			Route { room, protocol, state }
 		}
 	}
 
-	pub fn size(&self)->(usize,usize) {
-		self.field.size()
+	impl<'a> Iterator for Route<'a> {
+		type Item = State;
+
+		fn next(&mut self) -> Option<Self::Item> {
+
+			use Direction::*;
+
+			let State { location: Position{x,y}, orientation } = self.state;
+
+			// check exiting room condition
+
+			let guard_exits = {
+
+				let min = Position::zero();
+				let max = self.room.last_position();
+
+				orientation == North && y == min.y ||
+				orientation == East  && x == max.x ||
+				orientation == South && y == max.y ||
+				orientation == West  && x == min.x
+			};
+
+			if guard_exits { None } else {
+
+				// tries to take a step ahead
+
+				let position_ahead = match orientation {
+					North => Position{x,y:y-1},
+					East  => Position{x:x+1,y},
+					South => Position{x,y:y+1},
+					West  => Position{x:x-1,y},
+				};
+
+				let obstructed = self.room[position_ahead] == b'#';
+
+				if !obstructed {
+					self.state.location = position_ahead;
+				} else {
+					// try with next orientation
+					//
+					// NOTICE: this means that we will return repeated
+					// consecutive positions every turn
+					self.state.orientation = self.protocol.next().unwrap();
+				}
+
+				Some(self.state.to_owned())
+			}
+		}
 	}
+}
+
+struct Simulation {
+	room: Map
+}
+
+impl Simulation {
 
 	pub fn start_position(&self)-> Position {
 
-		let offset = self.data.iter().position(|&item| item == b'^')
+		let offset = self.room.iter().position(|item| item == b'^')
 			.expect("There room data should have a '^' character somewhere");
 
-		self.field.position_of(offset)
+		self.room.position_of(offset).unwrap()
 	}
 }
 
-struct Simulation<'a> {
-	room: Room,
-	guard_state: GuardState,
-	guard_protocol: Box<dyn 'a+Iterator<Item=Direction>>,
-}
-
-impl<'a, L:Iterator<Item=&'a str>+Clone> From<L> for Simulation<'a> {
+impl<'a, L:Iterator<Item=&'a str>+Clone> From<L> for Simulation {
 
 	fn from(lines:L)-> Self {
-
-		let room = Room(Map::from(lines));
-
-		let initial_guard_state = {
-			GuardState { location: room.start_position(), ..Default::default() }
-		};
-
-		Self {
-			room,
-			guard_state: initial_guard_state,
-			guard_protocol: Box::new(repeat(Direction::North)),
-		}
+		Self { room: Map::from(lines) }
 	}
 }
 
-impl<'a> Simulation<'a> {
+impl<'a> IntoIterator for &'a Simulation {
+	type Item = guard::State;
+	type IntoIter = Box<dyn Iterator<Item=guard::State> + 'a>;
 
-	pub fn set_protocol<P:'a+Iterator<Item=Direction>>(&mut self, protocol:P) {
-		self.guard_protocol = Box::new(protocol)
-	}
-
-	pub fn start_position(&self)->Position {
-		return self.room.start_position();
-	}
-
-	pub fn count_locations(&mut self)->usize {
-
-		let start = self.start_position();
-		let field = self.room.field.clone();
-
-		// NOTICE:
-		// the initial position must be added manually
-		let mut offsets:Vec<usize> = once(start).chain(self).map(|p| {
-			field.offset_of(p)
-		}).collect();
-
-		offsets.sort();
-		offsets.iter().dedup().count()
-	}
-}
-
-impl<'a> Iterator for Simulation<'a> {
-	type Item = Position;
-
-	fn next(&mut self) -> Option<Self::Item> {
-
-		use Direction::*;
-
-		let GuardState { location: Position(x,y), orientation } = self.guard_state;
-
-		// check exiting room condition
-
-		let guard_exits = {
-
-			let Position(min_x,min_y) = Position(0,0);
-			let Position(max_x,max_y) = self.room.field.last_position();
-
-			orientation == North && y == min_y ||
-			orientation == East  && x == max_x ||
-			orientation == South && y == max_y ||
-			orientation == West  && x == min_x
-		};
-
-		if guard_exits { None } else {
-
-			let position_ahead = match orientation {
-				North => Position(x,y-1),
-				East  => Position(x+1,y),
-				South => Position(x,y+1),
-				West  => Position(x-1,y),
-			};
-
-			let obstructed = self.room.at(position_ahead) == Some(b'#');
-
-			if !obstructed {
-				self.guard_state.location = position_ahead;
-			} else {
-				// try with next orientation
-				self.guard_state.orientation = self.guard_protocol.next().unwrap();
-			}
-
-			Some(self.guard_state.location)
-		}
+	fn into_iter(self) -> Self::IntoIter {
+		let route = guard::Route::new(&self.room,self.start_position());
+		Box::new(once(route.state).chain(route))
 	}
 }
 
 fn solve_1(input: &str) -> String {
 
-	use Direction::*;
+	let simulation = Simulation::from(Input(input).lines());
 
-	let protocol = [North,East,South,West].into_iter().cycle();
-	let mut simulation = Simulation::from(Input(input).lines());
-	simulation.set_protocol(protocol);
-	simulation.count_locations().to_string()
+	let mut offsets:Vec<usize> = simulation.into_iter()
+		// remove repeated positions due to guard turning
+		.dedup_by(|a,b| a.location == b.location )
+		.map(|guard::State{location,..}| simulation.room.offset_of(location).unwrap())
+		.collect();
+
+	offsets.sort();
+	offsets.iter()
+		// remove repeated positions due to paths crossing
+		.dedup()
+		.count()
+		.to_string()
 }
 
 #[cfg(test)]
@@ -184,30 +164,10 @@ mod test {
 		"###;
 
 	#[test]
-	fn simulation_initialization() {
-
-		let simulation = Simulation::from(Input(INPUT_EXAMPLE).lines());
-
-		assert_eq!(simulation.room.size(), (10,10));
-
-		let expected = GuardState { location: Position(4,6), orientation: Direction::North };
-		let actual = simulation.guard_state;
-
-		assert_eq!(actual,expected);
-	}
-
-	#[test]
 	fn part_1_example() {
 
-		use Direction::*;
-
-		let protocol = [North,East,South,West].into_iter().cycle();
-
-		let mut simulation = Simulation::from(Input(INPUT_EXAMPLE).lines());
-		simulation.set_protocol(protocol);
-
-		let expected = 41;
-		let actual = simulation.count_locations();
+		let expected = "41";
+		let actual = solve_1(INPUT_EXAMPLE);
 
 		assert_eq!(actual,expected);
 	}
