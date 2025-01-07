@@ -11,17 +11,11 @@ pub enum Direction {
 	West,
 }
 
-impl Default for Direction {
-	fn default() -> Self {
-		Self::North
-	}
-}
-
 mod guard {
 
 	use super::*;
 
-	#[derive(Debug,Clone,Copy,PartialEq,Eq,Default)]
+	#[derive(Debug,Clone,Copy,PartialEq,Eq)]
 	pub struct State {
 		pub location: Position,
 		pub orientation: Direction,
@@ -36,8 +30,9 @@ mod guard {
 	impl<'a> Route<'a> {
 		pub fn new(room:&'a Map,start:Position) -> Self {
 			use Direction::*;
-			let state = State { location: start, ..Default::default() };
-			let protocol = Box::new([North,East,South,West].into_iter().cycle());
+			let mut protocol = Box::new([North,East,South,West].into_iter().cycle());
+			let orientation = protocol.next().unwrap();
+			let state = State { location: start, orientation };
 			Route { room, protocol, state }
 		}
 	}
