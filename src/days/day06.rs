@@ -3,7 +3,7 @@
 use std::iter::once;
 use super::*;
 
-#[derive(Debug,Clone,Copy,PartialEq,Eq)]
+#[derive(Debug,Clone,Copy,PartialEq,Eq,Ord,PartialOrd)]
 pub enum Direction {
 	North,
 	East,
@@ -15,7 +15,7 @@ mod guard {
 
 	use super::*;
 
-	#[derive(Debug,Clone,Copy,PartialEq,Eq)]
+	#[derive(Debug,Clone,Copy,PartialEq,Eq,Ord,PartialOrd)]
 	pub struct State {
 		pub location: Position,
 		pub orientation: Direction,
@@ -75,7 +75,7 @@ mod guard {
 				if !obstructed {
 					self.state.location = position_ahead;
 				} else {
-					// try with next orientation
+					// try with next orientation according to protocol
 					//
 					// NOTICE: this means that we will return repeated
 					// consecutive positions every turn
@@ -89,24 +89,41 @@ mod guard {
 }
 
 struct Simulation {
-	room: Map
+	room: Map,
+	start: Position
 }
 
 impl Simulation {
 
-	pub fn start_position(&self)-> Position {
+	pub fn ins_obstacle(&mut self,p:Position) {
+		self.room[p] = b'#';
+	}
 
-		let offset = self.room.iter().position(|item| item == b'^')
-			.expect("There room data should have a '^' character somewhere");
+	pub fn del_obstacle(&mut self,p:Position) {
+		self.room[p] = b'.';
+	}
 
-		self.room.position_of(offset).unwrap()
+	pub fn iter(&self) -> impl Iterator<Item=guard::State> {
+		self.into_iter()
+			// Removes states that do not produce advance (rotating in place)
+			// NOTICE: Luckily for us, `dedup_by` seems to keep
+			// the last value, not the first.
+			.dedup_by(|a,b| a.location == b.location)
 	}
 }
 
 impl<'a, L:Iterator<Item=&'a str>+Clone> From<L> for Simulation {
 
 	fn from(lines:L)-> Self {
-		Self { room: Map::from(lines) }
+		let room = Map::from(lines);
+		let start = {
+			let offset = room.iter().position(|item| item == b'^')
+				.expect("There room data should have a '^' character somewhere");
+
+			room.position_of(offset).unwrap()
+		};
+
+		Self { room, start }
 	}
 }
 
@@ -115,7 +132,7 @@ impl<'a> IntoIterator for &'a Simulation {
 	type IntoIter = Box<dyn Iterator<Item=guard::State> + 'a>;
 
 	fn into_iter(self) -> Self::IntoIter {
-		let route = guard::Route::new(&self.room,self.start_position());
+		let route = guard::Route::new(&self.room,self.start);
 		Box::new(once(route.state).chain(route))
 	}
 }
@@ -124,9 +141,7 @@ fn solve_1(input: &str) -> String {
 
 	let simulation = Simulation::from(Input(input).lines());
 
-	let mut offsets:Vec<usize> = simulation.into_iter()
-		// remove repeated positions due to guard turning
-		.dedup_by(|a,b| a.location == b.location )
+	let mut offsets:Vec<usize> = simulation.iter()
 		.map(|guard::State{location,..}| simulation.room.offset_of(location).unwrap())
 		.collect();
 
@@ -134,6 +149,46 @@ fn solve_1(input: &str) -> String {
 	offsets.iter()
 		// remove repeated positions due to paths crossing
 		.dedup()
+		.count()
+		.to_string()
+}
+
+fn solve_2(input: &str) -> String {
+
+	use std::collections::BTreeSet;
+
+	let mut simulation = Simulation::from(Input(input).lines());
+
+	let mut guard_path = simulation.iter().map(|s| s.location).collect_vec();
+
+	// Try only unique locations along the guard trail
+	guard_path.sort();
+	guard_path.into_iter().dedup()
+		.filter(|&location| {
+
+			// An obstruction cannot be placed at the start position
+			if location == simulation.start { return false }
+
+			let mut it_loops:bool = false;
+			let mut visited = BTreeSet::new();
+
+			simulation.ins_obstacle(location);
+
+			for step in simulation.iter() {
+
+				// A loop is detected when the guard re-visit
+				// a location facing at the same direction
+
+				if !visited.insert(step) {
+					it_loops = true;
+					break
+				}
+			}
+
+			simulation.del_obstacle(location);
+
+			return it_loops
+		})
 		.count()
 		.to_string()
 }
@@ -168,9 +223,18 @@ mod test {
 	}
 
 	#[test]
+	fn part_2_example() {
+
+		let expected = "6";
+		let actual = solve_2(INPUT_EXAMPLE);
+
+		assert_eq!(actual,expected);
+	}
+
+	#[test]
 	fn submit()-> Result<(), AppError> {
 		try_submit(Day(6), solve_1, Part1)?;
-		// try_submit(Day(6), solve_2, Part2)?;
+		try_submit(Day(6), solve_2, Part2)?;
 		Ok(())
 	}
 }

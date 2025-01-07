@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::{Deref, Index}};
+use std::{fmt::Display, ops::{Deref, Index, IndexMut}};
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Default,Ord,PartialOrd)]
 pub struct Position { pub x:u16, pub y:u16 }
@@ -118,5 +118,12 @@ impl<T> Index<Position> for Map<T> {
 	fn index(&self, p: Position) -> &Self::Output {
 		let offset = self.field.offset_of(p).unwrap();
 		&self.data[offset]
+	}
+}
+
+impl<T> IndexMut<Position> for Map<T> {
+	fn index_mut(&mut self, p: Position) -> &mut Self::Output {
+		let offset = self.field.offset_of(p).unwrap();
+		&mut self.data[offset]
 	}
 }
