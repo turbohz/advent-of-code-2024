@@ -1,6 +1,8 @@
 // https://adventofcode.com/2024/day/4
 
 use std::iter::once;
+use itertools::iproduct;
+
 use super::*;
 
 /// Represents a rectangle board of
@@ -74,7 +76,7 @@ impl LetterBoard {
 		let (width,height) = self.size;
 		let ref content = self.content;
 
-		(0..width).cartesian_product(0..=height).map(move |(x,y)| {
+		iproduct!(0..width,0..=height).map(move |(x,y)| {
 			if y == height {
 				fence
 			} else{
