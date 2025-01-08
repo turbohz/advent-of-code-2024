@@ -11,7 +11,7 @@ mod day09;
 use std::fmt::Display;
 
 pub(self) use itertools::Itertools;
-pub(self) use common::*;
+pub(self) use types::*;
 
 use aoc_driver::Part;
 use peg::{error::ParseError, str::LineCol};
