@@ -1,10 +1,11 @@
 // https://adventofcode.com/2024/day/9
 
+use std::ops::RangeInclusive;
 use std::{num::NonZero, ops::{Deref, DerefMut}};
 
 use super::*;
 
-#[derive(Clone, Copy)]
+#[derive(Debug,Clone,Copy,PartialEq,Eq)]
 struct FileId(NonZero<u16>);
 
 impl TryFrom<u16> for FileId {
@@ -24,6 +25,7 @@ impl From<&FileId> for u16 {
 	}
 }
 
+#[derive(Debug,Clone,Copy,PartialEq,Eq)]
 enum Block {
 	Unused,
 	Used(FileId)
@@ -53,6 +55,18 @@ impl Block {
 
 struct Disk(Vec<Block>);
 
+#[derive(Debug)]
+struct Span {
+	kind: Block,
+	range: RangeInclusive<usize>
+}
+
+impl Span {
+	pub fn len(&self) -> usize {
+		1 + self.range.end() - self.range.start()
+	}
+}
+
 impl Disk {
 	pub fn new(map:&str) -> Self {
 		// Precompute expanded size
@@ -81,7 +95,7 @@ impl Disk {
 			})
 	}
 
-	pub fn packed(mut self)->Self {
+	pub fn pack(&mut self) {
 		let mut i1 = 0;
 		let mut i2 = self.len()-1;
 
@@ -96,7 +110,45 @@ impl Disk {
 			if matches!(self[i1],Block::Used(_)) { i1 += 1 };
 			if matches!(self[i2],Block::Unused)  { i2 -= 1 };
 		}
-		self
+	}
+
+	pub fn defrag(&mut self) {
+
+		let files = self.spans().filter(|Span{kind,..}| matches!(kind,Block::Used(_))).collect_vec();
+
+		for file in files.iter().rev() {
+			let relocate_to = {
+				let mut free_spans = self.spans().filter(|Span{kind,..}| matches!(kind,Block::Unused));
+				free_spans.find(|span| span.len() >= file.len())
+			};
+
+			if let Some(dst) = relocate_to {
+				// Can only move to the left!
+				if dst.range.start() <= file.range.start() {
+					self.move_blocks(file.range.clone(), *dst.range.start());
+				}
+			}
+		}
+	}
+
+	pub fn spans(&self) -> impl Iterator<Item=Span> {
+		self.iter().copied().enumerate().batching(|it| {
+			let head = it.next()?;
+			let (start,kind) = head;
+			let (end,_) = it.take_while_ref(|(_,blk)| *blk == kind).last().unwrap_or(head);
+			let span = Span { kind, range:start..=end };
+			Some(span)
+		})
+	}
+
+	fn move_blocks(&mut self, src:RangeInclusive<usize>,to:usize) {
+		// Not really :D
+		let len = src.end() - src.start();
+		let dst = to..=to+len;
+		for (s,d) in src.into_iter().zip(dst.into_iter()) {
+			self[d] = self[s];
+			self[s] = Block::Unused;
+		}
 	}
 
 	fn checksum(&self) -> usize {
@@ -128,8 +180,17 @@ impl DerefMut for Disk {
 fn solve_1(input: &str) -> String {
 
 	let map = Input(input).lines().take(1).collect::<String>();
+	let mut disk = Disk::new(&map);
+	disk.pack();
+	disk.checksum().to_string()
+}
 
-	Disk::new(&map).packed().checksum().to_string()
+fn solve_2(input: &str) -> String {
+
+	let map = Input(input).lines().take(1).collect::<String>();
+	let mut disk = Disk::new(&map);
+	disk.defrag();
+	disk.checksum().to_string()
 }
 
 #[cfg(test)]
@@ -155,10 +216,10 @@ mod test {
 		"###;
 
 	#[test]
-	fn part_1_example() {
+	fn disk() {
 
 		let map = Input(INPUT_EXAMPLE).lines().take(1).collect::<String>();
-		let disk = Disk::new(&map);
+		let mut disk = Disk::new(&map);
 
 		// Test initialization
 
@@ -167,26 +228,51 @@ mod test {
 
 		assert_eq!(actual,expected);
 
-		// Test compaction
+		// Moving blocks
 
-		let packed = disk.packed();
-		let actual = packed.show("");
+		disk.move_blocks(40..=41, 2);
+
+		let expected = "0099.111...2...333.44.5555.6666.777.8888..";
+		let actual = disk.show("");
+
+		assert_eq!(actual,expected);
+	}
+
+	#[test]
+	fn part_1_example() {
+
+		let map = Input(INPUT_EXAMPLE).lines().take(1).collect::<String>();
+		let mut disk = Disk::new(&map);
+
+		disk.pack();
+		let actual = disk.show("");
 		let expected = "0099811188827773336446555566..............";
 
 		assert_eq!(actual,expected);
 
-		// Test checksum
-
-		let actual = packed.checksum().to_string();
+		let actual = disk.checksum().to_string();
 		let expected = "1928";
 
 		assert_eq!(actual,expected);
 	}
 
 	#[test]
+	fn part_2_example() {
+		let map = Input(INPUT_EXAMPLE).lines().take(1).collect::<String>();
+		let mut disk = Disk::new(&map);
+		disk.defrag();
+
+		let expected = "00992111777.44.333....5555.6666.....8888..";
+		let actual = disk.show("");
+
+		assert_eq!(actual,expected);
+
+	}
+
+	#[test]
 	fn submit()-> Result<(), AppError> {
 		try_submit(Day(9), solve_1, Part1)?;
-		// try_submit(Day(9), solve_2, Part2)?;
+		try_submit(Day(9), solve_2, Part2)?;
 		Ok(())
 	}
 }
