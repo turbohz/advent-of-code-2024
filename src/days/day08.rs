@@ -1,6 +1,6 @@
 // https://adventofcode.com/2024/day/8
 
-use std::ops::{Add, Deref, Neg, Sub};
+use std::ops::Deref;
 
 use super::*;
 
@@ -60,49 +60,6 @@ impl City {
 	}
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
-struct V2(isize,isize);
-
-impl Neg for V2 {
-	type Output = V2;
-
-	fn neg(self) -> Self::Output {
-		V2(-self.0,-self.1)
-	}
-}
-
-impl Add for V2 {
-	type Output = V2;
-
-	fn add(self, rhs: Self) -> Self::Output {
-		let V2(x1,y1) = self;
-		let V2(x2,y2) = rhs;
-		V2(x1+x2,y1+y2)
-	}
-}
-
-impl Sub for V2 {
-	type Output = V2;
-
-	fn sub(self, rhs: Self) -> Self::Output {
-		self + (-rhs)
-	}
-}
-
-impl From<Position> for V2 {
-	fn from(pos: Position) -> Self {
-		let Position{x,y} = pos;
-		V2(x as isize, y as isize)
-	}
-}
-
-impl From<V2> for Position {
-	fn from(v2: V2) -> Self {
-		let V2(x,y) = v2;
-		Position{x: x as u16, y: y as u16}
-	}
-}
-
 fn solve_1(input: &str) -> String {
 
 	let city = City(Map::from(Input(input).lines()));
@@ -123,18 +80,19 @@ fn solve_1(input: &str) -> String {
 	// Must be inside the bounds, and they must
 	// be counted once (no dupes)
 
-	let max = city.last_position();
+	let max:V2 = city.last_position().into();
+	let min:V2 = V2::zero();
 
 	anti_nodes
 		.sorted()
 		.dedup()
 		.filter(|v| match *v {
 
-			V2(x,_) if x < 0 => false,
-			V2(x,_) if x > max.x as isize => false,
+			V2{x,..} if x < min.x => false,
+			V2{x,..} if x > max.x => false,
 
-			V2(_,y) if y < 0 => false,
-			V2(_,y) if y > max.y as isize => false,
+			V2{y,..} if y < min.y => false,
+			V2{y,..} if y > max.y => false,
 
 			_ => true
 		})
@@ -149,10 +107,8 @@ fn solve_2(input: &str) -> String {
 
 	fn antinodes(a:V2,b:V2,city:&City) -> impl IntoIterator<Item=Position> {
 
-		let (max_x,max_y) = {
-			let max = city.last_position();
-			(max.x as isize,max.y as isize)
-		};
+		let max:V2 = city.last_position().into();
+		let min:V2 = V2::zero();
 		let inc = b-a;
 		let mut antinode = b;
 		// antinodes generated from antennae a -> b
@@ -160,11 +116,11 @@ fn solve_2(input: &str) -> String {
 		std::iter::from_fn(move || {
 			antinode = antinode+inc;
 			match antinode {
-				V2(x,_) if x < 0 => None,
-				V2(x,_) if x > max_x => None,
+				V2{x,..} if x < min.x => None,
+				V2{x,..} if x > max.x => None,
 
-				V2(_,y) if y < 0 => None,
-				V2(_,y) if y > max_y => None,
+				V2{y,..} if y < min.x => None,
+				V2{y,..} if y > max.y => None,
 
 				_ => Some(antinode)
 			}
