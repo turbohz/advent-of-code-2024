@@ -1,6 +1,6 @@
 // https://adventofcode.com/2024/day/9
 
-use std::ops::RangeInclusive;
+use std::ops::{Range,RangeInclusive};
 use std::{num::NonZero, ops::{Deref, DerefMut}};
 
 use super::*;
@@ -53,8 +53,6 @@ impl Block {
 	}
 }
 
-struct Disk(Vec<Block>);
-
 #[derive(Debug)]
 struct Span {
 	kind: Block,
@@ -66,6 +64,8 @@ impl Span {
 		1 + self.range.end() - self.range.start()
 	}
 }
+
+struct Disk(Vec<Block>);
 
 impl Disk {
 	pub fn new(map:&str) -> Self {
@@ -114,16 +114,25 @@ impl Disk {
 
 	pub fn defrag(&mut self) {
 
-		let files = self.spans().filter(|Span{kind,..}| matches!(kind,Block::Used(_))).collect_vec();
+		let files = self.spans(None).filter(|Span{kind,..}| matches!(kind,Block::Used(_))).collect_vec();
+
+		let mut fragged:Range<usize> = 0..self.len();
 
 		for file in files.iter().rev() {
+
+			if *file.range.start() < fragged.start {
+				// There's no more free space on the left of the file
+				break
+			}
+
 			let relocate_to = {
-				let mut free_spans = self.spans().filter(|Span{kind,..}| matches!(kind,Block::Unused));
+				let mut free_spans = self.spans(Some(fragged.clone())).filter(|Span{kind,..}| matches!(kind,Block::Unused)).peekable();
+				fragged.start = *free_spans.peek().unwrap().range.start();
 				free_spans.find(|span| span.len() >= file.len())
 			};
 
 			if let Some(dst) = relocate_to {
-				// Can only move to the left!
+				// Files can only be moved to the left
 				if dst.range.start() <= file.range.start() {
 					self.move_blocks(file.range.clone(), *dst.range.start());
 				}
@@ -131,14 +140,19 @@ impl Disk {
 		}
 	}
 
-	pub fn spans(&self) -> impl Iterator<Item=Span> {
-		self.iter().copied().enumerate().batching(|it| {
-			let head = it.next()?;
-			let (start,kind) = head;
-			let (end,_) = it.take_while_ref(|(_,blk)| *blk == kind).last().unwrap_or(head);
-			let span = Span { kind, range:start..=end };
-			Some(span)
-		})
+	pub fn spans(&self,range:Option<Range<usize>>) -> impl Iterator<Item=Span> {
+		let Range { start, end } = range.unwrap_or(0..self.len());
+		let len   = end-start;
+		self.iter().copied().enumerate()
+			.skip(start)
+			.take(len)
+			.batching(|it| {
+				let head = it.next()?;
+				let (start,kind) = head;
+				let (end,_) = it.take_while_ref(|(_,blk)| *blk == kind).last().unwrap_or(head);
+				let span = Span { kind, range:start..=end };
+				Some(span)
+			})
 	}
 
 	fn move_blocks(&mut self, src:RangeInclusive<usize>,to:usize) {
