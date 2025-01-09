@@ -22,9 +22,14 @@ impl Into<(u16,u16)> for Position {
 	}
 }
 
-impl From<V2> for Position {
-	fn from(v2: V2) -> Self {
+impl TryFrom<V2> for Position {
+	type Error = ();
+	fn try_from(v2: V2) -> Result<Self,Self::Error> {
 		let V2{x,y} = v2;
-		Position{x: x as u16, y: y as u16}
+		if x >= 0 && y >= 0 {
+			Ok(Position{x: x as u16, y: y as u16})
+		} else {
+			Err(())
+		}
 	}
 }

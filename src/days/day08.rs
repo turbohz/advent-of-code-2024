@@ -126,7 +126,7 @@ fn solve_2(input: &str) -> String {
 			}
 		})
 		// Plus the two antennae
-		.chain([a,b].into_iter()).map(Position::from)
+		.chain([a,b].into_iter()).map(Position::try_from).flatten()
 	}
 
 	// Gather all pairs of antennae with the same frequency
