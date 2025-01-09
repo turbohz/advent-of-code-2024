@@ -3,14 +3,6 @@
 use std::iter::once;
 use super::*;
 
-#[derive(Debug,Clone,Copy,PartialEq,Eq,Ord,PartialOrd)]
-pub enum Direction {
-	North,
-	East,
-	South,
-	West,
-}
-
 mod guard {
 
 	use super::*;
