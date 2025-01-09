@@ -25,11 +25,11 @@ impl<T> Deref for Map<T> {
 	}
 }
 
-impl<'a, L:Iterator<Item=&'a str>+Clone> From<L> for Map<u8> {
+impl<'a,T:From<u8>,L:Iterator<Item=&'a str>+Clone> From<L> for Map<T> {
 	fn from(lines: L) -> Self {
 		let mut rows = lines.map(str::bytes).peekable();
 		let width:u16 = rows.peek().unwrap().len().try_into().unwrap();
-		let data:Vec<u8> = rows.flatten().collect();
+		let data:Vec<T> = rows.flatten().map(T::from).collect();
 		let height:u16 = u16::try_from(data.len()).unwrap() / width;
 		let field:Field = (width,height).into();
 		Map { field, data }
