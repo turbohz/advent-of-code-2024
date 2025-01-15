@@ -16,8 +16,8 @@ use super::*;
 /// Strategy:
 /// - Find trailheads level locations
 /// - scan around for locations with level + 1
-/// - Follow along until you're on a level 9 or
-///   there's nowhere else to go
+/// - Repeat 8 times
+/// - Spots remaining are peaks
 
 #[derive(Debug,Default,Clone,Copy,PartialEq,Eq,PartialOrd,Ord)]
 struct Level(u8);
@@ -71,6 +71,12 @@ impl Deref for TopographicMap {
 }
 
 impl TopographicMap {
+
+	const DIRECTIONS:[Direction;4] = const {
+		use Direction::*;
+		[North,East,South,West]
+	};
+
 	pub fn at(&self,coord: impl Into<V2>) -> Option<Spot> {
 		let coord:V2 = coord.into();
 		if self.contains(coord) {
@@ -89,31 +95,40 @@ impl TopographicMap {
 			.filter_map(|(i,level)| {
 				if level == Level::MIN {
 					let location = self.position_of(i).unwrap();
-					let spot = Spot { location,level };
-					Some(spot)
+					Some(Spot{location,level})
 				} else {
 					None
 				}
 			})
 	}
 
-	fn paths(&self,spot:Spot) -> impl Iterator<Item=Spot> {
-		const DIRECTIONS:[Direction;4] = const {
-			use Direction::*;
-			[North,East,South,West]
-		};
+	fn neighbors(&self,spot:Spot) -> impl Iterator<Item=Spot> {
 
-		let next_level = spot.level.next();
 		let coord:V2 = spot.location.into();
 
-		DIRECTIONS.into_iter()
-			// empty() if no next level ↴
-			.zip(std::iter::repeat_n(next_level,DIRECTIONS.len()).flatten())
-			.filter_map(move |(dir,lvl)| {
+		Self::DIRECTIONS
+			.into_iter()
+			.filter_map(move |dir| {
 				let delta:V2 = dir.into();
 				let next = coord + delta;
 				// A spot there, which is next level
-				self.at(next).filter(|spot| spot.level == lvl)
+				self.at(next)
+			})
+	}
+
+	fn paths(&self,spot:Spot) -> impl Iterator<Item=Spot> {
+
+		let next_level = spot.level.next();
+
+		// We must return the exact same iterator type when
+		// there's no next level, and when there are zero
+		// or more suitable neighbors
+		self.neighbors(spot)
+			// empty() if no next level ↴
+			.zip(std::iter::repeat_n(next_level,Self::DIRECTIONS.len()).flatten())
+			.filter_map(|(spot,lvl)| {
+				// A spot there, which is next level
+				Some(spot).filter(|s|s.level == lvl)
 			})
 	}
 }
@@ -154,6 +169,26 @@ impl Debug for Spot {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f,"{}",self)
 	}
+}
+
+fn solve_1(input: &str) -> String {
+
+	let map = TopographicMap::from(Input(input).lines());
+
+	map.trailheads()
+		.map(|h| {
+			let mut steps:Option<Box<dyn Iterator<Item=Spot>>> = Some(Box::new(map.paths(h)));
+			// Walk 8 times towards Stops with level+=1
+			for _ in 1..=8 {
+				let next_spots = steps.take().unwrap().collect_vec();
+				let _ = steps.insert(Box::new(next_spots.into_iter().map(|s| map.paths(s)).flatten()));
+			}
+			// Collect peaks
+			steps.take().unwrap().map(|s| s.location).unique().count()
+		})
+		.inspect(|c| println!("{c}"))
+		.sum::<usize>()
+		.to_string()
 }
 
 #[cfg(test)]
@@ -228,5 +263,19 @@ mod test {
 		assert!(locations.contains(&Position{x:6,y:6}));
 
 		assert!(locations.contains(&Position{x:1,y:7}));
+	}
+
+	#[test]
+	fn part_1_example() {
+		let actual = solve_1(INPUT_EXAMPLE);
+		let expected = "36";
+		assert_eq!(actual,expected);
+	}
+
+	#[test]
+	fn submit()-> Result<(), AppError> {
+		try_submit(Day(10), solve_1, Part1)?;
+		// try_submit(Day(9), solve_2, Part2)?;
+		Ok(())
 	}
 }
