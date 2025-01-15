@@ -1,3 +1,5 @@
+#![warn(rust_2024_incompatible_pat)]
+
 use std::process::ExitCode;
 use aoc_driver::aoc_magic;
 
