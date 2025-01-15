@@ -1,4 +1,4 @@
-use super::Position;
+use super::{Position, V2};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Field {
@@ -25,6 +25,13 @@ impl Field {
 	#[inline]
 	pub fn stride(&self) -> usize {
 		self.width as usize
+	}
+
+	pub fn contains(&self, coord:V2) -> bool {
+		let V2{x,y} = coord;
+		x >= 0 && y >= 0 &&
+		x < (self.width  as i32) &&
+		y < (self.height as i32)
 	}
 
 	pub fn offset_of(&self, p:Position) -> Option<usize> {
