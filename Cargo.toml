@@ -12,3 +12,6 @@ peg = "0.8.4"
 
 [dev-dependencies]
 pretty_assertions = "1.4"
+
+[profile.test]
+inherits = "release"
