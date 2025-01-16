@@ -131,6 +131,20 @@ impl TopographicMap {
 				Some(spot).filter(|s|s.level == lvl)
 			})
 	}
+
+	/// Climb up starting at a given trail head.
+	/// Returns the peaks reached for all possible paths
+	pub fn climb(&self,spot:Spot) -> impl Iterator<Item=Spot> {
+
+		let mut steps:Option<Box<dyn Iterator<Item=Spot>>> = Some(Box::new(self.paths(spot)));
+		// Walk 8 times towards Stops with level+=1
+		for _ in 1..=8 {
+			let next_spots = steps.take().unwrap().collect_vec();
+			let _ = steps.insert(Box::new(next_spots.into_iter().map(|s| self.paths(s)).flatten()));
+		}
+		// Collect peaks
+		steps.take().unwrap()
+	}
 }
 
 impl Display for TopographicMap {
@@ -177,16 +191,25 @@ fn solve_1(input: &str) -> String {
 
 	map.trailheads()
 		.map(|h| {
-			let mut steps:Option<Box<dyn Iterator<Item=Spot>>> = Some(Box::new(map.paths(h)));
-			// Walk 8 times towards Stops with level+=1
-			for _ in 1..=8 {
-				let next_spots = steps.take().unwrap().collect_vec();
-				let _ = steps.insert(Box::new(next_spots.into_iter().map(|s| map.paths(s)).flatten()));
-			}
-			// Collect peaks
-			steps.take().unwrap().map(|s| s.location).unique().count()
+			map.climb(h)
+				.map(|s| s.location)
+				.unique()
+				.count()
 		})
-		.inspect(|c| println!("{c}"))
+		.sum::<usize>()
+		.to_string()
+}
+
+fn solve_2(input: &str) -> String {
+
+	let map = TopographicMap::from(Input(input).lines());
+
+	map.trailheads()
+		.map(|h| {
+			map.climb(h)
+				.map(|s| s.location)
+				.count()
+		})
 		.sum::<usize>()
 		.to_string()
 }
@@ -273,9 +296,16 @@ mod test {
 	}
 
 	#[test]
+	fn part_2_example() {
+		let actual = solve_2(INPUT_EXAMPLE);
+		let expected = "81";
+		assert_eq!(actual,expected);
+	}
+
+	#[test]
 	fn submit()-> Result<(), AppError> {
 		try_submit(Day(10), solve_1, Part1)?;
-		// try_submit(Day(9), solve_2, Part2)?;
+		try_submit(Day(10), solve_2, Part2)?;
 		Ok(())
 	}
 }
