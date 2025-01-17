@@ -136,14 +136,12 @@ impl TopographicMap {
 	/// Returns the peaks reached for all possible paths
 	pub fn climb(&self,spot:Spot) -> impl Iterator<Item=Spot> {
 
-		let mut steps:Option<Box<dyn Iterator<Item=Spot>>> = Some(Box::new(self.paths(spot)));
-		// Walk 8 times towards Stops with level+=1
-		for _ in 1..=8 {
-			let next_spots = steps.take().unwrap().collect_vec();
-			let _ = steps.insert(Box::new(next_spots.into_iter().map(|s| self.paths(s)).flatten()));
-		}
-		// Collect peaks
-		steps.take().unwrap()
+		let steps:Box<dyn Iterator<Item=Spot>> = Box::new(self.paths(spot));
+
+		// Walk 8 times towards Spots with level+=1
+		(1..=8).fold(steps,|steps,_| {
+			Box::new(steps.flat_map(|s| self.paths(s)))
+		})
 	}
 }
 
