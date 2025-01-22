@@ -4,7 +4,7 @@ use std::{num::ParseIntError, ops::Deref};
 
 use super::*;
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug,Clone,Copy,PartialEq)]
 struct Stone(usize);
 impl From<usize> for Stone {
 	fn from(value: usize) -> Self {
@@ -28,6 +28,34 @@ impl TryFrom<&str> for Stone {
 	}
 }
 
+enum Iter<T:Copy> {
+	Empty(),
+	Single(T),
+	Couple(T,T)
+}
+
+impl<T:Copy> Iterator for Iter<T> {
+	type Item = T;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		match self {
+			Self::Empty() => None
+			,
+			Self::Single(single) => {
+				let v = *single;
+				*self = Self::Empty();
+				Some(v)
+			}
+			,
+			Self::Couple(fst,snd) => {
+				let v = *fst;
+				*self = Self::Single(*snd);
+				Some(v)
+			}
+		}
+	}
+}
+
 impl From<Stone> for String {
 	fn from(value: Stone) -> Self {
 		(*value).to_string()
@@ -41,9 +69,9 @@ impl Stone {
 			None
 		} else {
 			// 1 + n (where 10^n = v)
-			let l10 = 1 + v.ilog10();
-			if l10 % 2 == 0 {
-				let n = 10usize.pow(l10/2);
+			let digits = 1 + v.ilog10();
+			if digits % 2 == 0 {
+				let n = 10usize.pow(digits/2);
 				let upper = v/n;
 				let lower = v%n;
 				Some((upper,lower))
@@ -53,46 +81,70 @@ impl Stone {
 		}
 	}
 
-	pub fn evolve(&self) -> Vec<Stone> {
+	pub fn evolve(&self) -> impl Iterator<Item=Stone> {
+		use Iter::*;
 		let v = self.0;
 		if v == 0 {
-			vec![Stone(1)]
+			Single(Stone(1))
 		} else if let Some((a,b)) = self.try_split() {
-			vec![Stone(a),Stone(b)]
+			Couple(Stone(a),Stone(b))
 		} else {
-			vec![Stone(v*2024)]
+			Single(Stone(v*2024))
 		}
 	}
 }
 
-struct Blinker(pub Vec<Stone>);
-impl Blinker {
-	pub fn stones(&self) -> &Vec<Stone> {
-		&self.0
-	}
+struct Blinker {
+	seed: Vec<Stone>
 }
-impl Iterator for Blinker {
-	type Item = String;
 
-	fn next(&mut self) -> Option<Self::Item> {
-		let stones = self.0.iter().flat_map(Stone::evolve).collect_vec();
-		let str = stones.iter().copied().map(String::from).join(" ");
-		self.0 = stones;
-		Some(str)
+impl Blinker {
+
+	fn count<const TIMES:u8>(self) -> usize {
+
+		fn walk<const MAX:u8>(t:impl Iterator<Item=Stone>,i:u8) -> usize {
+			if i < MAX - 1 {
+				t.map(|s| walk::<MAX>(s.evolve(),i+1)).sum()
+			} else {
+				t.count()
+			}
+		}
+
+		self.seed
+			.into_iter()
+			.map(|stone| walk::<TIMES>(stone.evolve(),0))
+			.sum::<usize>()
+	}
+
+	fn collect<const TIMES:u8>(self) -> String {
+
+		fn walk<const MAX:u8>(t:impl Iterator<Item=Stone>,i:u8) -> Vec<Stone> {
+			if i < MAX - 1 {
+				t.map(|s| walk::<MAX>(s.evolve(),i+1)).flatten().collect_vec()
+			} else {
+				t.collect_vec()
+			}
+		}
+
+		self.seed
+			.into_iter()
+			.flat_map(|stone| walk::<TIMES>(stone.evolve(),0))
+			.map(String::from)
+			.join(" ")
 	}
 }
 
 impl From<&str> for Blinker {
 	fn from(value: &str) -> Self {
-		let stones = value.split(' ').map(|n| Stone::try_from(n).unwrap()).collect_vec();
-		Self(stones)
+		let seed = value.split(' ').map(|n| Stone::try_from(n).unwrap()).collect_vec();
+		Self { seed }
 	}
 }
 
 fn solve_1(input: &str) -> String {
 	let line = Input(input).lines().next().unwrap();
-	let blinker = Blinker::from(line);
-	blinker.dropping(25).stones().len().to_string()
+	let blinker:Blinker = line.into();
+	blinker.count::<25>().to_string()
 }
 
 #[cfg(test)]
@@ -119,37 +171,65 @@ mod test {
 	}
 
 	#[test]
+	fn iter() {
+		let mut empty = Iter::<Stone>::Empty();
+		assert_eq!(empty.next(),None);
+
+		let mut single = Iter::Single(Stone(0));
+		assert_eq!(single.next(),Some(Stone(0)));
+		assert_eq!(single.next(),None);
+
+		let mut couple = Iter::Couple(Stone(0),Stone(1));
+		assert_eq!(couple.next(),Some(Stone(0)));
+		assert_eq!(couple.next(),Some(Stone(1)));
+		assert_eq!(couple.next(),None);
+	}
+
+	#[test]
 	fn part_1_example() {
 
 		let line = Input(INPUT_EXAMPLE).lines().next().unwrap();
-		let mut blinker = Blinker::from(line);
 
-		let actual = blinker.next().unwrap_or_default();
+		let blinker:Blinker = line.into();
 		let expected = "253000 1 7";
+		let actual = blinker.collect::<1>();
 		assert_eq!(actual, expected);
 
-		let actual = blinker.next().unwrap_or_default();
+		let blinker:Blinker = line.into();
 		let expected = "253 0 2024 14168";
+		let actual = blinker.collect::<2>();
 		assert_eq!(actual, expected);
 
-		let actual = blinker.next().unwrap_or_default();
+		let blinker:Blinker = line.into();
 		let expected = "512072 1 20 24 28676032";
+		let actual = blinker.collect::<3>();
 		assert_eq!(actual, expected);
 
-		let actual = blinker.next().unwrap_or_default();
+		let blinker:Blinker = line.into();
 		let expected = "512 72 2024 2 0 2 4 2867 6032";
+		let actual = blinker.collect::<4>();
 		assert_eq!(actual, expected);
 
-		let actual = blinker.next().unwrap_or_default();
+		let blinker:Blinker = line.into();
 		let expected = "1036288 7 2 20 24 4048 1 4048 8096 28 67 60 32";
+		let actual = blinker.collect::<5>();
 		assert_eq!(actual, expected);
 
-		let actual = blinker.next().unwrap_or_default();
+		let blinker:Blinker = line.into();
 		let expected = "2097446912 14168 4048 2 0 2 4 40 48 2024 40 48 80 96 2 8 6 7 6 0 3 2";
-		assert_eq!(actual,expected);
+		let actual = blinker.collect::<6>();
+		assert_eq!(actual, expected);
 
-		let actual = blinker.dropping(25-6).stones().len();
+		// Counts
+
+		let blinker:Blinker = line.into();
+		let expected = 22;
+		let actual = blinker.count::<6>();
+		assert_eq!(actual, expected);
+
+		let blinker:Blinker = line.into();
 		let expected = 55312;
+		let actual = blinker.count::<25>();
 		assert_eq!(actual, expected);
 	}
 
